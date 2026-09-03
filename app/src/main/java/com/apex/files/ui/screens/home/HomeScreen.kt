@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
@@ -43,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -160,18 +157,23 @@ fun HomeScreen() {
             SectionLabel("Herramientas")
         }
         item {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
-                modifier = Modifier.fillMaxWidth().height(240.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            val tools = listOf(
+                ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Elimina carpetas vacías") { navigator.push(Screen.Cleaner) },
+                ToolSpec(Icons.Outlined.ContentCopy, "Buscador de Duplicados", "Detección por SHA-256") { navigator.push(Screen.Duplicates) },
+                ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) },
+                ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") { navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot()))) },
+            )
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                userScrollEnabled = false,
             ) {
-                item { ToolCard(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Elimina carpetas vacías") { navigator.push(Screen.Cleaner) } }
-                item { ToolCard(Icons.Outlined.ContentCopy, "Buscador de Duplicados", "Detección por SHA-256") { navigator.push(Screen.Duplicates) } }
-                item { ToolCard(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) } }
-                item { ToolCard(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") { navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot()))) } }
+                tools.chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { spec ->
+                            ToolCard(spec.icon, spec.title, spec.subtitle, spec.onClick, Modifier.weight(1f))
+                        }
+                    }
+                }
             }
         }
 
@@ -199,15 +201,34 @@ fun HomeScreen() {
         // ---- Categories ----
         item { SectionLabel("Categorías") }
         item {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 96.dp),
-                modifier = Modifier.fillMaxWidth().height(192.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            // Adaptive column count (min tile ~104dp) with content-sized rows:
+            // no fixed heights, so nothing clips or overlaps at any font scale.
+            val columns = ((LocalConfiguration.current.screenWidthDp - 40) / 104).coerceIn(2, 6)
+            val entries = listOf(
+                Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"),
+                Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"),
+                Triple(Category.AUDIO, Icons.Outlined.Audiotrack, "Audio"),
+                Triple(Category.DOCUMENT, Icons.Outlined.Description, "Documentos"),
+                Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"),
+            )
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                userScrollEnabled = false,
             ) {
-                categoryItems(state, navigator)
+                entries.chunked(columns).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        row.forEach { (category, icon, label) ->
+                            CategoryTile(
+                                category = category,
+                                icon = icon,
+                                label = label,
+                                count = state.categoryCounts[category] ?: 0,
+                                onClick = { navigator.push(Screen.Category(category)) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -302,8 +323,9 @@ private fun ToolCard(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    ApexCard(onClick = onClick) {
+    ApexCard(onClick = onClick, modifier = modifier) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(22.dp).width(22.dp))
         Spacer(Modifier.height(8.dp))
         Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -381,30 +403,31 @@ private fun RecentRow(
     }
 }
 
-private fun androidx.compose.foundation.lazy.grid.LazyGridScope.categoryItems(
-    state: HomeViewModel.UiState,
-    navigator: com.apex.files.Navigator,
+/** Tool entry rendered by the two-per-row quick-tools grid. */
+private data class ToolSpec(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun CategoryTile(
+    category: Category,
+    icon: ImageVector,
+    label: String,
+    count: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val entries = listOf(
-        Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"),
-        Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"),
-        Triple(Category.AUDIO, Icons.Outlined.Audiotrack, "Audio"),
-        Triple(Category.DOCUMENT, Icons.Outlined.Description, "Documentos"),
-        Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"),
-    )
-    items(entries, key = { it.first.name }) { (category, icon, label) ->
-        ApexCard(
-            onClick = { navigator.push(Screen.Category(category)) },
-            contentPadding = PaddingValues(10.dp),
-        ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp).width(20.dp))
-            Spacer(Modifier.height(6.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                (state.categoryCounts[category] ?: 0).toString(),
-                style = MonoTextStyleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    ApexCard(onClick = onClick, modifier = modifier, contentPadding = PaddingValues(10.dp)) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp).width(20.dp))
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            count.toString(),
+            style = MonoTextStyleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

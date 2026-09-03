@@ -51,6 +51,7 @@ import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.NeonProgressBar
 import com.apex.files.ui.theme.ApexBorder
 import com.apex.files.ui.theme.ApexTextMuted
+import com.apex.files.ui.theme.ApexTextSecondary
 import com.apex.files.ui.theme.MonoTextStyleSmall
 
 @Composable
@@ -224,6 +225,6 @@ private fun colorFor(node: SpaceAnalyzer.SpaceNode, accent: Color): Color {
         Category.DOCUMENT -> Color(0xFFFFAB00).copy(alpha = 0.85f)
         Category.ARCHIVE -> Color(0xFFFF2A6D).copy(alpha = 0.85f)
         Category.APK -> Color(0xFF00E5FF).copy(alpha = 0.85f)
-        else -> Color(0xFF8E8E93).copy(alpha = 0.7f)
+        else -> ApexTextSecondary.copy(alpha = 0.7f)
     }
 }
