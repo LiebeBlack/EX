@@ -30,8 +30,8 @@ object NodeOpener {
         container: AppContainer,
         navigator: Navigator,
         context: Context,
-        onUnavailable: (String) -> Unit = {},
         imageContext: List<FileNode> = emptyList(),
+        onUnavailable: (String) -> Unit = {},
     ) {
         // Every open lands in the Home "Recientes" list (files only).
         if (!node.isDir) container.recents.record(node)
