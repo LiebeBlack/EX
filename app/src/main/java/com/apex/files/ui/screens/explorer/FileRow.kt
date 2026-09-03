@@ -1,6 +1,7 @@
 package com.apex.files.ui.screens.explorer
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +42,7 @@ import com.apex.files.ui.theme.MonoTextStyleSmall
 import java.io.File
 
 /** Detailed list row: thumbnail, 1-line name, mono size · date. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileRow(
     node: FileNode,

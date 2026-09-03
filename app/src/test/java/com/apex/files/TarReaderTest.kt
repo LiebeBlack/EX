@@ -2,6 +2,7 @@ package com.apex.files
 
 import com.apex.files.data.fs.TarReader
 import java.io.ByteArrayInputStream
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -60,16 +61,18 @@ class TarReaderTest {
     @Test
     fun `reads ustar entries with sizes and types`() {
         TarReader(ByteArrayInputStream(buildTar())).use { reader ->
-            val entries = reader.readAll()
-            assertEquals(3, entries.size)
-            assertEquals("hello.txt", entries[0].name)
-            assertEquals(5L, entries[0].size)
-            assertEquals(false, entries[0].isDir)
-            assertEquals("dir", entries[1].name)
-            assertEquals(true, entries[1].isDir)
-            assertEquals("dir/nested.txt", entries[2].name)
-            assertEquals(3L, entries[2].size)
-            assertEquals(false, entries[2].isDir)
+            runBlocking {
+                val entries = reader.readAll()
+                assertEquals(3, entries.size)
+                assertEquals("hello.txt", entries[0].name)
+                assertEquals(5L, entries[0].size)
+                assertEquals(false, entries[0].isDir)
+                assertEquals("dir", entries[1].name)
+                assertEquals(true, entries[1].isDir)
+                assertEquals("dir/nested.txt", entries[2].name)
+                assertEquals(3L, entries[2].size)
+                assertEquals(false, entries[2].isDir)
+            }
         }
     }
 
@@ -77,9 +80,11 @@ class TarReaderTest {
     fun `streams file content through the entry input`() {
         TarReader(ByteArrayInputStream(buildTar())).use { reader ->
             var content: String? = null
-            reader.forEachEntry { entry, stream ->
-                if (entry.name == "hello.txt") {
-                    content = stream?.readBytes()?.toString(Charsets.UTF_8)
+            runBlocking {
+                reader.forEachEntry { entry, stream ->
+                    if (entry.name == "hello.txt") {
+                        content = stream?.readBytes()?.toString(Charsets.UTF_8)
+                    }
                 }
             }
             assertEquals("hello", content)
@@ -98,9 +103,11 @@ class TarReaderTest {
         out.write(ByteArray(1024))
 
         TarReader(ByteArrayInputStream(out.toByteArray())).use { reader ->
-            val entries = reader.readAll()
-            assertEquals(1, entries.size)
-            assertEquals(longName, entries[0].name)
+            runBlocking {
+                val entries = reader.readAll()
+                assertEquals(1, entries.size)
+                assertEquals(longName, entries[0].name)
+            }
         }
     }
 
@@ -110,7 +117,7 @@ class TarReaderTest {
         bytes[0] = 0x58 // corrupt the name byte
         var thrown = false
         try {
-            TarReader(ByteArrayInputStream(bytes)).use { it.readAll() }
+            TarReader(ByteArrayInputStream(bytes)).use { runBlocking { it.readAll() } }
         } catch (e: Exception) {
             thrown = true
         }

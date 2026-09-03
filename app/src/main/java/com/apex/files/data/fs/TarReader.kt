@@ -23,7 +23,7 @@ class TarReader(input: InputStream) : Closeable {
     private val inn = BufferedInputStream(input, 64 * 1024)
 
     /** Lists every entry without extracting anything. */
-    fun readAll(): List<TarEntry> {
+    suspend fun readAll(): List<TarEntry> {
         val entries = ArrayList<TarEntry>()
         forEachEntry { entry, _ -> entries.add(entry) }
         return entries
@@ -34,7 +34,7 @@ class TarReader(input: InputStream) : Closeable {
      * [InputStream] bounded to exactly [TarEntry.size] bytes; it must fully
      * consume it (the reader drains whatever remains before continuing).
      */
-    fun forEachEntry(handler: (TarEntry, InputStream?) -> Unit) {
+    suspend fun forEachEntry(handler: suspend (TarEntry, InputStream?) -> Unit) {
         var pendingLongName: String? = null
         while (true) {
             val header = ByteArray(512)

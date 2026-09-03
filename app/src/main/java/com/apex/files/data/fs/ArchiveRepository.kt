@@ -35,7 +35,7 @@ data class ArchiveEntry(
 class ArchiveRepository(private val context: Context, private val fs: FsRepository) {
 
     sealed interface Handle : Closeable {
-        fun entries(): List<ArchiveEntry>
+        suspend fun entries(): List<ArchiveEntry>
         fun name(): String
     }
 
@@ -183,7 +183,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
     }
 
     private class ZipHandle(private val zip: ZipFile) : Handle {
-        override fun entries(): List<ArchiveEntry> {
+        override suspend fun entries(): List<ArchiveEntry> {
             val list = ArrayList<ArchiveEntry>()
             val e = zip.entries()
             while (e.hasMoreElements()) {
@@ -213,7 +213,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
     }
 
     private class TarHandle(private val archiveName: String, private val reader: TarReader) : Handle {
-        override fun entries(): List<ArchiveEntry> = reader.readAll().map {
+        override suspend fun entries(): List<ArchiveEntry> = reader.readAll().map {
             ArchiveEntry(it.name, it.size, it.isDir, it.lastModified)
         }
 
@@ -225,7 +225,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
     private class GzHandle(private val archiveName: String, private val file: File) : Handle {
         private val outName: String = archiveName.removeSuffix(".gz").ifBlank { "extraido" }
 
-        override fun entries(): List<ArchiveEntry> = listOf(
+        override suspend fun entries(): List<ArchiveEntry> = listOf(
             ArchiveEntry(outName, -1L, isDir = false, lastModified = file.lastModified())
         )
 
