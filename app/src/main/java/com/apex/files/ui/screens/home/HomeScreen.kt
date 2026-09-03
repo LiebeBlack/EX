@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
+import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
@@ -215,9 +216,12 @@ fun HomeScreen() {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     recents.forEach { entry ->
-                        RecentRow(entry.node) {
-                            openFavorite(entry.node)
-                        }
+                        RecentRow(
+                            node = entry.node,
+                            openedAt = entry.openedAt,
+                            onClick = { openFavorite(entry.node) },
+                            onRemove = { container.recents.remove(entry.node.path) },
+                        )
                     }
                 }
             }
@@ -318,7 +322,12 @@ private fun FavoriteCard(
 }
 
 @Composable
-private fun RecentRow(node: FileNode, onClick: () -> Unit) {
+private fun RecentRow(
+    node: FileNode,
+    openedAt: Long,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
     ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FileIcon(node.category, node.isDir, Modifier.size(28.dp), size = 18.dp)
@@ -332,13 +341,19 @@ private fun RecentRow(node: FileNode, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    "${node.path.substringBeforeLast('/').ifBlank { "/" }} · ${SizeFormatter.format(node.size)}",
+                    "${DateFormatter.relative(openedAt)} · ${node.path.substringBeforeLast('/').ifBlank { "/" }}",
                     style = MonoTextStyleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            ApexIconButton(
+                Icons.Outlined.Close,
+                "Quitar de recientes",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = onRemove,
+            )
         }
     }
 }

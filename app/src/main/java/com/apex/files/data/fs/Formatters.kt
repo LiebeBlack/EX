@@ -41,4 +41,23 @@ object DateFormatter {
             else -> fullFmt.format(date)
         }
     }
+
+    /**
+     * Relative time for "recent" surfaces: Ahora / hace N min / hace N h /
+     * Ayer, falling back to [format] for anything older.
+     */
+    fun relative(timestamp: Long, nowMillis: Long = System.currentTimeMillis()): String {
+        if (timestamp <= 0L) return "—"
+        val elapsed = nowMillis - timestamp
+        return when {
+            elapsed < 0L -> format(timestamp, nowMillis)
+            elapsed < 60_000L -> "Ahora"
+            elapsed < 60 * 60_000L -> "hace ${elapsed / 60_000L} min"
+            elapsed < 24 * 60 * 60_000L -> {
+                val hours = elapsed / (60 * 60_000L)
+                if (hours == 1L) "hace 1 h" else "hace $hours h"
+            }
+            else -> format(timestamp, nowMillis)
+        }
+    }
 }

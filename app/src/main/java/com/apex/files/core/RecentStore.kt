@@ -4,9 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.model.FileNode
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -46,6 +49,25 @@ class RecentStore(context: Context) {
         }
         _items.value = updated
         persist(updated)
+    }
+
+    /** Removes a single entry (e.g. when the file no longer exists). */
+    fun remove(path: String) {
+        val updated = _items.value.filterNot { it.node.path == path }
+        _items.value = updated
+        persist(updated)
+    }
+
+    /** Drops entries whose files no longer exist (SAF nodes are kept: they
+     *  cannot be checked without a ContentResolver query). */
+    suspend fun prune() = withContext(Dispatchers.IO) {
+        val updated = _items.value.filter { entry ->
+            entry.node.uri != null || File(entry.node.path).exists()
+        }
+        if (updated.size != _items.value.size) {
+            _items.value = updated
+            persist(updated)
+        }
     }
 
     fun clear() {

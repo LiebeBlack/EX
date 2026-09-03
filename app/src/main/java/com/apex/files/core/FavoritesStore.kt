@@ -4,9 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.model.FileNode
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -46,6 +49,17 @@ class FavoritesStore(context: Context) {
         val current = _items.value.filterNot { it.node.path == path }
         _items.value = current
         persist(current)
+    }
+
+    /** Drops entries whose files no longer exist (SAF nodes are kept). */
+    suspend fun prune() = withContext(Dispatchers.IO) {
+        val updated = _items.value.filter { f ->
+            f.node.uri != null || File(f.node.path).exists()
+        }
+        if (updated.size != _items.value.size) {
+            _items.value = updated
+            persist(updated)
+        }
     }
 
     private fun persist(items: List<Favorite>) {

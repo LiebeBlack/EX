@@ -49,6 +49,7 @@ fun ImageViewerScreen(node: FileNode) {
     var scale by remember { mutableFloatStateOf(1f) }
     var rotation by remember { mutableFloatStateOf(0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var failed by remember { mutableStateOf(false) }
 
     Box(
         Modifier
@@ -59,6 +60,8 @@ fun ImageViewerScreen(node: FileNode) {
             model = if (node.uri != null) node.uri else File(node.path),
             contentDescription = node.name,
             contentScale = ContentScale.Fit,
+            onError = { failed = true },
+            onSuccess = { failed = false },
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
@@ -89,6 +92,15 @@ fun ImageViewerScreen(node: FileNode) {
                     translationY = offset.y
                 },
         )
+
+        if (failed) {
+            Text(
+                "No se pudo mostrar la imagen",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
 
         ApexIconButton(
             Icons.Outlined.Close,

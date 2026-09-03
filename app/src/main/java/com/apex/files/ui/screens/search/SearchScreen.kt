@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
@@ -43,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.SearchFilters
 import com.apex.files.data.fs.SizeFormatter
+import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
@@ -56,6 +59,9 @@ import com.apex.files.ui.theme.ApexBorder
 import com.apex.files.ui.theme.ApexContainer
 import com.apex.files.ui.theme.ApexShapes
 import com.apex.files.ui.theme.MonoTextStyleSmall
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import java.io.File
 
 @Composable
 fun SearchScreen() {
@@ -165,6 +171,20 @@ private fun SearchField(state: SearchViewModel.UiState, vm: SearchViewModel) {
             },
             modifier = Modifier.weight(1f).focusRequester(focusRequester),
         )
+        if (state.query.isNotEmpty()) {
+            Spacer(Modifier.size(4.dp))
+            Icon(
+                Icons.Outlined.Close,
+                "Borrar búsqueda",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { vm.setQuery("") },
+            )
+        }
     }
 }
 
@@ -271,7 +291,20 @@ private fun SearchResultRow(node: FileNode, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FileIcon(node.category, node.isDir, Modifier.size(32.dp), size = 20.dp)
+        if (node.category == Category.IMAGE) {
+            val context = LocalContext.current
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(node.uri ?: File(node.path))
+                    .size(96)
+                    .build(),
+                contentDescription = node.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)),
+            )
+        } else {
+            FileIcon(node.category, node.isDir, Modifier.size(32.dp), size = 20.dp)
+        }
         Spacer(Modifier.size(10.dp))
         Column(Modifier.weight(1f)) {
             Text(

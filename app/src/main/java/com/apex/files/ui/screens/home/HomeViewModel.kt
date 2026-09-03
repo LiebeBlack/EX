@@ -31,6 +31,11 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     init {
         refresh(force = false)
+        // Drop Favoritos / Recientes entries that point to deleted files.
+        viewModelScope.launch {
+            container.recents.prune()
+            container.favorites.prune()
+        }
     }
 
     /**
