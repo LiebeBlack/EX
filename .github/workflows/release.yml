@@ -17,7 +17,8 @@
 #
 # Secrets (optional but recommended for stable update signatures):
 #   KEYSTORE_BASE64   — base64 of your release.keystore
-#   KEYSTORE_PASSWORD — keystore password (defaults to "apexci123")
+#   KEYSTORE_PASSWORD — real keystore password (defaults to "apexci123")
+#   KEYSTORE_ALIAS    — alias inside the keystore (defaults to "apex")
 # =============================================================================
 
 name: Release APEX File Manager
@@ -71,23 +72,34 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
         run: |
           PASS="${KEYSTORE_PASSWORD:-apexci123}"
+          ALIAS="${KEYSTORE_ALIAS:-apex}"
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            # Verify password + alias up front so a misconfiguration fails
+            # here with a clear message instead of at APK packaging time.
+            if ! keytool -list -keystore release.keystore -storepass "$PASS" -alias "$ALIAS" >/dev/null 2>&1; then
+              echo "::error::No se pudo leer release.keystore con la contraseña/alias configurados."
+              echo "::error::Revisa en GitHub > Settings > Secrets and variables > Actions:"
+              echo "::error::  - KEYSTORE_PASSWORD debe ser la contraseña real del almacén (no el fallback apexci123)."
+              echo "::error::  - KEYSTORE_ALIAS debe coincidir con el alias real dentro del .jks (por defecto: apex)."
+              exit 1
+            fi
           else
             # Ephemeral CI key — artifacts are installable; for stable
             # upgrade signatures configure the KEYSTORE_BASE64 secret.
             keytool -genkeypair -v \
               -keystore release.keystore \
-              -alias apex \
+              -alias "$ALIAS" \
               -keyalg RSA -keysize 2048 -validity 3650 \
               -storepass "$PASS" -keypass "$PASS" \
               -dname "CN=APEX File Manager, OU=CI, O=APEX, C=ES" >/dev/null 2>&1
           fi
           echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> "$GITHUB_ENV"
           echo "KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
-          echo "KEY_ALIAS=apex" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
 
       - name: Run unit tests + build optimized release APKs
         run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
