@@ -30,8 +30,8 @@ class TreemapLayoutTest {
         assertEquals(8, rects.size)
 
         // Total area preserved.
-        val totalArea = rects.sumOf { it.w * it.h }
-        assertEquals(w * h, totalArea, 1.0)
+        val totalArea = rects.sumOf { (it.w * it.h).toDouble() }
+        assertEquals((w * h).toDouble(), totalArea, 1.0)
 
         // Every rect inside the canvas.
         for (r in rects) {
@@ -59,7 +59,7 @@ class TreemapLayoutTest {
         val big = rects.first { it.node.name == "big" }
         val small = rects.first { it.node.name == "small" }
         val ratio = (big.w * big.h) / (small.w * small.h)
-        assertEquals(3.0, ratio, 0.2)
+        assertEquals(3.0, ratio.toDouble(), 0.2)
     }
 
     @Test
