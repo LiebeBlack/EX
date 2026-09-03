@@ -30,8 +30,10 @@ object TreemapLayout {
         val total = items.sumOf { it.size }.toFloat()
         if (total <= 0f) return emptyList()
 
+        // Constant per-node area scale (Bruls, Huizing, van Wijk).
+        val scale = width * height / total
         val out = ArrayList<TreemapRect>(items.size)
-        place(items, 0, 0f, 0f, width, height, total, out)
+        place(items, 0, 0f, 0f, width, height, scale, out)
         return out
     }
 
@@ -42,15 +44,15 @@ object TreemapLayout {
         y: Float,
         w: Float,
         h: Float,
-        total: Float,
+        scale: Float,
         out: MutableList<TreemapRect>,
     ) {
         if (start >= items.size) return
         if (w <= 0.5f || h <= 0.5f) return
 
         val side = min(w, h)
-        val areaScale = (w * h) / total
 
+        // Greedily grow a row while the worst aspect ratio improves.
         val row = ArrayList<SpaceAnalyzer.SpaceNode>()
         var rowSum = 0f
         var i = start
@@ -60,7 +62,7 @@ object TreemapLayout {
             var maxArea = 0f
             var minArea = Float.MAX_VALUE
             for (n in candidate) {
-                val area = n.size * areaScale
+                val area = n.size * scale
                 if (area > maxArea) maxArea = area
                 if (area < minArea) minArea = area
             }
@@ -72,57 +74,40 @@ object TreemapLayout {
 
         while (i < items.size) {
             val next = items[i]
-            val candidate = ArrayList(row)
-            candidate.add(next)
-            val candidateWorst = worst(candidate, rowSum + next.size)
+            val candidateWorst = worst(row + next, rowSum + next.size)
             if (row.isEmpty() || candidateWorst <= worst(row, rowSum)) {
                 row.add(next)
                 rowSum += next.size
                 i++
-                if (i >= items.size) {
-                    placeRow(row, rowSum, x, y, w, h, total, out)
-                    return
-                }
             } else {
-                placeRow(row, rowSum, x, y, w, h, total, out)
-                place(items, i, x, y, w, h, total, out)
-                return
+                break
             }
         }
-        placeRow(row, rowSum, x, y, w, h, total, out)
-    }
 
-    private fun placeRow(
-        row: List<SpaceAnalyzer.SpaceNode>,
-        rowSum: Float,
-        x: Float,
-        y: Float,
-        w: Float,
-        h: Float,
-        total: Float,
-        out: MutableList<TreemapRect>,
-    ) {
-        if (row.isEmpty()) return
-        val side = min(w, h)
-        val thickness = (rowSum * (w * h) / total) / side
+        // The strip spans the FULL height (vertical) or FULL width
+        // (horizontal) of the remaining rectangle, so its thickness is the
+        // row's area divided by that spanning dimension.
+        val spanning = if (w <= h) h else w
+        val thickness = rowSum * scale / spanning
         if (thickness <= 0f) return
+
         var offset = 0f
         if (w <= h) {
             // Vertical strip of width `thickness` on the left.
             for (n in row) {
-                val area = n.size * (w * h) / total
-                val rh = area / thickness
+                val rh = n.size * scale / thickness
                 out.add(TreemapRect(x + offset, y, thickness, rh, n))
                 offset += rh
             }
+            place(items, i, x + thickness, y, w - thickness, h, scale, out)
         } else {
             // Horizontal strip of height `thickness` on top.
             for (n in row) {
-                val area = n.size * (w * h) / total
-                val rw = area / thickness
+                val rw = n.size * scale / thickness
                 out.add(TreemapRect(x, y + offset, rw, thickness, n))
                 offset += rw
             }
+            place(items, i, x, y + thickness, w, h - thickness, scale, out)
         }
     }
 }
