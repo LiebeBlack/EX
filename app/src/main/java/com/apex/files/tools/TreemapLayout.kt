@@ -1,7 +1,6 @@
 package com.apex.files.tools
 
 import kotlin.math.max
-import kotlin.math.min
 
 data class TreemapRect(
     val x: Float,
@@ -50,7 +49,9 @@ object TreemapLayout {
         if (start >= items.size) return
         if (w <= 0.5f || h <= 0.5f) return
 
-        val side = min(w, h)
+        // A row spans the LONGER side of the free rectangle, so its
+        // thickness runs along the shorter side (squarified treemap).
+        val span = if (w >= h) w else h
 
         // Greedily grow a row while the worst aspect ratio improves.
         val row = ArrayList<SpaceAnalyzer.SpaceNode>()
@@ -66,7 +67,7 @@ object TreemapLayout {
                 if (area > maxArea) maxArea = area
                 if (area < minArea) minArea = area
             }
-            val s2 = side * side
+            val s2 = span * span
             val r1 = s2 * maxArea / (sum * sum)
             val r2 = (sum * sum) / (s2 * minArea)
             return max(r1, r2)
@@ -84,30 +85,29 @@ object TreemapLayout {
             }
         }
 
-        // The strip spans the FULL height (vertical) or FULL width
-        // (horizontal) of the remaining rectangle, so its thickness is the
-        // row's area divided by that spanning dimension.
-        val spanning = if (w <= h) h else w
-        val thickness = rowSum * scale / spanning
+        val thickness = rowSum * scale / span
         if (thickness <= 0f) return
 
-        var offset = 0f
-        if (w <= h) {
-            // Vertical strip of width `thickness` on the left.
-            for (n in row) {
-                val rh = n.size * scale / thickness
-                out.add(TreemapRect(x + offset, y, thickness, rh, n))
-                offset += rh
-            }
-            place(items, i, x + thickness, y, w - thickness, h, scale, out)
-        } else {
-            // Horizontal strip of height `thickness` on top.
+        // Chain every rect to the previous one's edge so shared borders are
+        // bit-identical floats: no gaps and no overlaps, even in strict tests.
+        if (w >= h) {
+            // Full-width strip along the top: children advance on x.
+            var cursor = x
             for (n in row) {
                 val rw = n.size * scale / thickness
-                out.add(TreemapRect(x, y + offset, rw, thickness, n))
-                offset += rw
+                out.add(TreemapRect(cursor, y, rw, thickness, n))
+                cursor += rw
             }
             place(items, i, x, y + thickness, w, h - thickness, scale, out)
+        } else {
+            // Full-height strip along the left: children advance on y.
+            var cursor = y
+            for (n in row) {
+                val rh = n.size * scale / thickness
+                out.add(TreemapRect(x, cursor, thickness, rh, n))
+                cursor += rh
+            }
+            place(items, i, x + thickness, y, w - thickness, h, scale, out)
         }
     }
 }
