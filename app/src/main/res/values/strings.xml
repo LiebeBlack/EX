@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">APEX</string>
+    <string name="app_tagline">FILE MANAGER</string>
+
+    <!-- Dashboard -->
+    <string name="storage">Almacenamiento</string>
+    <string name="used">Usado</string>
+    <string name="free">Libre</string>
+    <string name="of">de</string>
+    <string name="tools">Herramientas</string>
+    <string name="cleaner">Limpiador Vacío</string>
+    <string name="cleaner_sub">Elimina carpetas vacías</string>
+    <string name="duplicates">Buscador de Duplicados</string>
+    <string name="duplicates_sub">Detección por SHA-256</string>
+    <string name="apk_filter">Filtro APK</string>
+    <string name="apk_filter_sub">Instaladores redundantes</string>
+    <string name="categories">Categorías</string>
+    <string name="images">Imágenes</string>
+    <string name="videos">Videos</string>
+    <string name="audio">Audio</string>
+    <string name="documents">Documentos</string>
+    <string name="archives">Archivos</string>
+    <string name="internal_storage">Almacenamiento interno</string>
+    <string name="sd_card">Tarjeta SD</string>
+    <string name="usb_otg">USB-OTG</string>
+    <string name="connect_usb">Conectar USB-OTG</string>
+    <string name="disconnect">Desconectar</string>
+    <string name="open">Abrir</string>
+
+    <!-- Explorer -->
+    <string name="search">Buscar</string>
+    <string name="explorer">Explorador</string>
+    <string name="select_destination">Selecciona la carpeta de destino</string>
+    <string name="paste_here">Pegar aquí</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="delete_confirm_title">¿Eliminar?</string>
+    <string name="delete_confirm_msg">Se eliminará %1$d elemento(s) de forma permanente. Esta acción no se puede deshacer.</string>
+    <string name="copy">Copiar</string>
+    <string name="move">Mover</string>
+    <string name="rename">Renombrar</string>
+    <string name="share">Compartir</string>
+    <string name="properties">Propiedades</string>
+    <string name="compress">Comprimir</string>
+    <string name="new_folder">Nueva carpeta</string>
+    <string name="folder_name">Nombre</string>
+    <string name="ok">Aceptar</string>
+    <string name="empty_dir">Carpeta vacía</string>
+    <string name="loading">Cargando…</string>
+    <string name="no_items">Sin resultados</string>
+    <string name="select_all">Seleccionar todo</string>
+    <string name="clear_selection">Limpiar</string>
+    <string name="view_list">Lista</string>
+    <string name="view_grid">Cuadrícula</string>
+    <string name="sort">Ordenar</string>
+    <string name="by_name">Por nombre</string>
+    <string name="by_size">Por tamaño</string>
+    <string name="by_date">Por fecha</string>
+    <string name="items_selected">%1$d seleccionados</string>
+
+    <!-- Properties sheet -->
+    <string name="name">Nombre</string>
+    <string name="path">Ruta</string>
+    <string name="size">Tamaño</string>
+    <string name="modified">Modificado</string>
+    <string name="mime">Tipo MIME</string>
+    <string name="category_label">Categoría</string>
+    <string name="permissions">Permisos</string>
+    <string name="perm_read">Lectura</string>
+    <string name="perm_write">Escritura</string>
+    <string name="perm_execute">Ejecución</string>
+    <string name="files_count">Archivos</string>
+    <string name="dirs_count">Carpetas</string>
+    <string name="hash_sha">SHA-256</string>
+    <string name="hash_md5">MD5</string>
+    <string name="computing">Calculando…</string>
+    <string name="copied">Copiado</string>
+    <string name="calculate">Calcular</string>
+
+    <!-- Operation center -->
+    <string name="op_copy">Copiando</string>
+    <string name="op_move">Moviendo</string>
+    <string name="op_delete">Eliminando</string>
+    <string name="op_compress">Comprimiendo</string>
+    <string name="op_extract">Extrayendo</string>
+    <string name="op_benchmark">Probando almacenamiento</string>
+    <string name="files_of">de</string>
+    <string name="cancel_op">Cancelar</string>
+    <string name="operation_cancelled">Operación cancelada</string>
+    <string name="operation_done">Operación completada</string>
+    <string name="operation_failed">Operación fallida</string>
+
+    <!-- Search -->
+    <string name="search_hint">Buscar archivos…</string>
+    <string name="size_filter">Tamaño</string>
+    <string name="size_small">&lt;1 MB</string>
+    <string name="size_medium">1–100 MB</string>
+    <string name="size_giant">&gt;1 GB</string>
+    <string name="date_filter">Fecha</string>
+    <string name="date_today">Hoy</string>
+    <string name="date_week">Última semana</string>
+    <string name="date_month">Este mes</string>
+    <string name="date_year">Este año</string>
+    <string name="ext_filter">Extensión</string>
+    <string name="ext_hint">*.apk, *.pdf</string>
+    <string name="results_count">%1$d resultados</string>
+
+    <!-- Permissions gate -->
+    <string name="perm_title">Acceso al almacenamiento</string>
+    <string name="perm_all_files">Acceso total a archivos</string>
+    <string name="perm_all_files_desc">Necesario para explorar, limpiar y buscar en todo el almacenamiento</string>
+    <string name="perm_media">Permisos de medios</string>
+    <string name="perm_media_desc">Para las categorías Imágenes, Vídeos y Audio</string>
+    <string name="perm_saf">Explorar con SAF</string>
+    <string name="perm_saf_desc">Alternativa sin acceso total a archivos</string>
+    <string name="grant">Conceder</string>
+    <string name="granted">Concedido</string>
+    <string name="start_apex">Iniciar APEX</string>
+    <string name="perm_required">Se requiere acceso al almacenamiento para continuar</string>
+
+    <!-- Settings -->
+    <string name="settings">Ajustes</string>
+    <string name="hidden_files">Mostrar archivos ocultos</string>
+    <string name="hidden_files_desc">Archivos que empiezan por «.» y carpetas con .nomedia</string>
+    <string name="accent">Acento neón</string>
+    <string name="benchmark">Benchmark de almacenamiento</string>
+    <string name="benchmark_desc">Mide la velocidad de lectura y escritura reales</string>
+    <string name="about">Acerca de APEX</string>
+    <string name="zero_dep">Cero dependencias · Cero red · 100%% local</string>
+    <string name="version">Versión 1.0</string>
+
+    <!-- Benchmark -->
+    <string name="run">Ejecutar</string>
+    <string name="write_speed">Escritura</string>
+    <string name="read_speed">Lectura</string>
+    <string name="elapsed">Tiempo</string>
+    <string name="running">Probando…</string>
+    <string name="volume">Volumen</string>
+    <string name="bench_payload">Carga de prueba: 32 MB</string>
+    <string name="bench_done">Prueba completada</string>
+
+    <!-- Tools -->
+    <string name="scanning">Escaneando…</string>
+    <string name="found">Encontrados</string>
+    <string name="reclaimable">Espacio recuperable</string>
+    <string name="delete_selected">Eliminar seleccionados</string>
+    <string name="no_duplicates">Sin duplicados</string>
+    <string name="no_empty_dirs">Sin carpetas vacías</string>
+    <string name="keep_first">Conservar 1</string>
+    <string name="duplicate_group">Grupo %1$d · %2$s</string>
+    <string name="apk_installed">Instalada</string>
+    <string name="apk_not_installed">No instalada</string>
+    <string name="delete_uninstalled">Eliminar no instaladas</string>
+    <string name="unknown">Desconocido</string>
+
+    <!-- Space analyzer -->
+    <string name="space_analyzer">Analizador de espacio</string>
+    <string name="analyzing">Analizando…</string>
+    <string name="tap_hint">Toca un bloque para entrar</string>
+    <string name="other">Otros</string>
+    <string name="up">Subir</string>
+
+    <!-- Viewers -->
+    <string name="lines">líneas</string>
+    <string name="showing">Mostrando</string>
+    <string name="encoding">Codificación</string>
+    <string name="load_more">Cargar más</string>
+    <string name="page">página</string>
+    <string name="extract">Extraer</string>
+    <string name="extract_here">Extraer aquí</string>
+    <string name="archive_root">Raíz</string>
+    <string name="text_too_big">Archivo demasiado grande para previsualizarlo completo</string>
+    <string name="open_external">Abrir con otra aplicación</string>
+
+    <!-- Misc -->
+    <string name="error">Error</string>
+    <string name="perm_denied">Permiso denegado</string>
+    <string name="drives">Unidades</string>
+    <string name="available">Disponible</string>
+</resources>

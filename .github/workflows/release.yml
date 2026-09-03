@@ -1,0 +1,149 @@
+# =============================================================================
+# APEX File Manager — automated Release pipeline
+#
+# Triggers:
+#   - push to `main` / `master`
+#   - manual run (workflow_dispatch)
+#
+# What it does:
+#   1. checks out the code (full history for release notes)
+#   2. sets up JDK 17 + Android SDK + Gradle cache
+#   3. prepares a signing keystore (stable key from secret KEYSTORE_BASE64,
+#      or an ephemeral CI keystore as fallback)
+#   4. runs the unit tests and assembles the optimized per-ABI release APKs
+#      (arm64-v8a, armeabi-v7a, x86_64) plus the universal APK
+#   5. stages the artifacts with clean names + SHA-256 checksums
+#   6. creates a GitHub Release with generated version notes
+#
+# Secrets (optional but recommended for stable update signatures):
+#   KEYSTORE_BASE64   — base64 of your release.keystore
+#   KEYSTORE_PASSWORD — keystore password (defaults to "apexci123")
+# =============================================================================
+
+name: Release APEX File Manager
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apex-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_NAME: "APEX File Manager"
+  VERSION_TAG: "v1.0.${{ github.run_number }}"
+
+jobs:
+  build-and-release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for release notes)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Grant execute permission to the wrapper
+        run: chmod +x gradlew
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          PASS="${KEYSTORE_PASSWORD:-apexci123}"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          else
+            # Ephemeral CI key — artifacts are installable; for stable
+            # upgrade signatures configure the KEYSTORE_BASE64 secret.
+            keytool -genkeypair -v \
+              -keystore release.keystore \
+              -alias apex \
+              -keyalg RSA -keysize 2048 -validity 3650 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=APEX File Manager, OU=CI, O=APEX, C=ES" >/dev/null 2>&1
+          fi
+          echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=apex" >> "$GITHUB_ENV"
+
+      - name: Run unit tests + build optimized release APKs
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+
+      - name: Stage artifacts (per-ABI + universal + checksums)
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for apk in app/build/outputs/apk/release/*-release.apk; do
+            base=$(basename "$apk")
+            abi=$(echo "$base" | sed 's/^app-\(.*\)-release\.apk$/\1/')
+            if [ "$abi" = "universal" ]; then
+              out="APEX-${{ env.VERSION_TAG }}-universal.apk"
+            else
+              out="APEX-${{ env.VERSION_TAG }}-${abi}.apk"
+            fi
+            cp "$apk" "dist/$out"
+          done
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+          ls -lh dist
+
+      - name: Generate release notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          {
+            echo "## 🚀 ${{ env.APP_NAME }} — ${{ env.VERSION_TAG }}"
+            echo
+            echo "**Generado automáticamente desde el push más reciente.**"
+            echo
+            echo "### ✨ Cambios desde la última versión"
+            echo
+            if [ -n "$PREV_TAG" ]; then
+              git log --oneline --no-merges "$PREV_TAG"..HEAD
+            else
+              git log --oneline --no-merges
+            fi
+            echo
+            echo "### 📦 Artefactos optimizados por arquitectura"
+            echo
+            echo "| APK | Arquitectura |"
+            echo "|-----|--------------|"
+            echo "| APEX-${{ env.VERSION_TAG }}-arm64-v8a.apk | ARM64 (teléfonos actuales) |"
+            echo "| APEX-${{ env.VERSION_TAG }}-armeabi-v7a.apk | ARM32 (dispositivos antiguos) |"
+            echo "| APEX-${{ env.VERSION_TAG }}-x86_64.apk | x64 (emuladores / dispositivos x86_64) |"
+            echo "| APEX-${{ env.VERSION_TAG }}-universal.apk | Todas las arquitecturas |"
+            echo
+            echo "Cada APK incluye su checksum en \`SHA256SUMS.txt\`."
+          } > notes.md
+          cat notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          name: "${{ env.APP_NAME }} ${{ env.VERSION_TAG }}"
+          body_path: notes.md
+          files: dist/*
+          draft: false
+          prerelease: false
