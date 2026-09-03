@@ -39,6 +39,22 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 performSearch()
             }
         }
+        // Make sure the index is usable: restore the persisted snapshot or,
+        // when none exists, build it once and persist it for next time.
+        viewModelScope.launch {
+            if (container.index.size == 0) {
+                withContext(Dispatchers.IO) {
+                    val cached = container.indexStore.load()
+                    if (cached != null) {
+                        container.index.restore(cached)
+                    } else {
+                        container.index.rebuild(container.settings.showHidden.value)
+                        container.indexStore.save(container.index.allFiles())
+                    }
+                }
+            }
+            _state.update { it.copy(indexed = container.index.size) }
+        }
     }
 
     private fun rerun() {
@@ -70,6 +86,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 container.index.rebuild(container.settings.showHidden.value)
+                // Persist the fresh index so future cold starts skip the scan.
+                container.indexStore.save(container.index.allFiles())
             }
             _state.update { it.copy(indexed = container.index.size) }
             performSearch()

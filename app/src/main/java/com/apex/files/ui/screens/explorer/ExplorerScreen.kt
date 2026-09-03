@@ -51,14 +51,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.core.OpType
-import com.apex.files.data.fs.FileKinds
-import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.data.model.SortOrder
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.LocalOperationCenter
+import com.apex.files.ui.NodeOpener
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.ApexTopBar
@@ -101,32 +100,7 @@ fun ExplorerScreen(location: Location) {
     }
 
     fun openFile(node: FileNode) {
-        when {
-            node.category == Category.IMAGE -> navigator.push(Screen.ImageViewer(node))
-            FileKinds.isText(node) -> navigator.push(Screen.TextViewer(node))
-            node.extension == "pdf" -> navigator.push(Screen.PdfViewer(node))
-            container.archive.isSupported(node) -> navigator.push(Screen.ArchiveViewer(node))
-            node.category == Category.APK -> {
-                val uri = container.fs.shareUri(node)
-                if (uri != null) {
-                    val intent = Intent(Intent.ACTION_VIEW)
-                        .setDataAndType(uri, "application/vnd.android.package-archive")
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    runCatching { context.startActivity(intent) }
-                        .onFailure { toast("No hay aplicación para instalar") }
-                }
-            }
-            else -> {
-                val uri = container.fs.shareUri(node)
-                if (uri != null) {
-                    val intent = Intent(Intent.ACTION_VIEW)
-                        .setDataAndType(uri, FileKinds.mimeOf(node))
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    runCatching { context.startActivity(Intent.createChooser(intent, "Abrir con")) }
-                        .onFailure { toast("No hay aplicación para este tipo de archivo") }
-                }
-            }
-        }
+        NodeOpener.open(node, container, navigator, context) { msg -> toast(msg) }
     }
 
     fun shareSelected() {

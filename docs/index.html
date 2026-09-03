@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>APEX File Manager — Documentación</title>
+<meta name="description" content="Documentación técnica de APEX File Manager: descripción, funcionalidades, tecnologías, arquitectura, versiones y descargas.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="shell">
+    <nav class="topbar" aria-label="Navegación principal">
+      <a class="wordmark" href="#inicio">APEX <span>·</span> FILE MANAGER</a>
+      <button class="quiet" id="theme-toggle" type="button" title="Cambiar tema">Tema</button>
+    </nav>
+  </div>
+</header>
+
+<main id="inicio" class="shell">
+
+  <section class="hero">
+    <p class="eyebrow">Documentación técnica — v1.0</p>
+    <h1>APEX File&nbsp;Manager</h1>
+    <p class="lede">Gestor de archivos para Android. Interfaz OLED oscura, rendimiento de lista
+      perezosa, herramientas de limpieza 100&nbsp;% algorítmicas y visores integrados.
+      Cero red. Cero servicios en segundo plano. Cien por cien local.</p>
+    <ul class="facts" aria-label="Hechos clave">
+      <li>Kotlin&nbsp;2.0.21 + Jetpack&nbsp;Compose</li>
+      <li>minSdk&nbsp;26 · targetSdk&nbsp;35</li>
+      <li>Sin permiso INTERNET</li>
+      <li>Sin IA · sin Firebase · sin trackers</li>
+    </ul>
+  </section>
+
+  <nav class="toc" aria-label="Contenido de la página">
+    <ol>
+      <li><a href="#descripcion">Descripción</a></li>
+      <li><a href="#funcionalidades">Funcionalidades</a></li>
+      <li><a href="#tecnologia">Tecnología</a></li>
+      <li><a href="#arquitectura">Arquitectura</a></li>
+      <li><a href="#versiones">Versiones</a></li>
+      <li><a href="#descargas">Descargas e instalación</a></li>
+      <li><a href="#desarrollador">Desarrollador</a></li>
+    </ol>
+  </nav>
+
+  <section id="descripcion" class="section">
+    <p class="eyebrow">01 · Descripción</p>
+    <h2>Un explorador sobrio y rápido</h2>
+    <p>APEX es un explorador de archivos tipo <em>CX File Explorer</em> con estética minimalista
+      <strong>Dark&nbsp;OLED</strong>: fondo negro puro, acento neón y bordes ultrafinos. Está
+      concebido como una herramienta de alto rendimiento sobre el almacenamiento local:
+      navegación instantánea con listas perezosas, herramientas de mantenimiento basadas en
+      algoritmos deterministas y visores nativos para los formatos más habituales.</p>
+    <p>El proyecto declara tres garantías estructurales, verificables en el manifiesto y en el
+      código fuente:</p>
+    <ul class="plain">
+      <li><strong>Sin red.</strong> La aplicación no declara el permiso <code>INTERNET</code>; no
+        puede realizar llamadas de red, ni enviar telemetría ni cargar contenido remoto.</li>
+      <li><strong>Sin segundo plano.</strong> No hay servicios, ni <code>WorkManager</code>, ni
+        receptores: el consumo de batería en reposo es nulo.</li>
+      <li><strong>Sin dependencias de análisis.</strong> Sin Firebase, ML&nbsp;Kit ni modelos;
+        categorización, hashing y limpieza se implementan con algoritmos propios.</li>
+    </ul>
+  </section>
+
+  <section id="funcionalidades" class="section">
+    <p class="eyebrow">02 · Funcionalidades</p>
+    <h2>Qué hace la aplicación</h2>
+
+    <h3>Pantalla de inicio</h3>
+    <p>Cabecera tipográfica, tarjeta de almacenamiento con lectura real de <code>StatFs</code>,
+      herramientas rápidas y recuentos por categoría: Imágenes, Vídeos y Audio desde
+      <code>MediaStore</code>; Documentos y Archivos desde el índice local.</p>
+
+    <h3>Explorador</h3>
+    <ul class="plain">
+      <li>Ruta de migas (<em>breadcrumb</em>) interactiva.</li>
+      <li>Vista lista ⇄ cuadrícula con <code>LazyColumn</code> / <code>LazyVerticalGrid</code>.</li>
+      <li>Selección múltiple: copiar, mover, renombrar, eliminar, compartir, comprimir, propiedades.</li>
+      <li>Centro de operaciones flotante con progreso, velocidad en MB/s, conteo y cancelación.</li>
+      <li>Propiedades: SHA-256 / MD5 bajo demanda, recuento recursivo, permisos y MIME.</li>
+      <li>Acceso total (Android&nbsp;11+) y árboles <abbr title="Storage Access Framework">SAF</abbr>
+        (USB-OTG, tarjetas SD).</li>
+    </ul>
+
+    <h3>Motores locales</h3>
+    <ul class="plain">
+      <li>Índice de búsqueda acotado y <strong>persistido en disco</strong>: la búsqueda global y los
+        recuentos se restauran sin re-escandear el almacenamiento en cada arranque.</li>
+      <li>Categorización por extensiones con expresiones regulares precompiladas.</li>
+      <li>Detección de duplicados en dos fases: agrupación por tamaño exacto y
+        <code>SHA-256</code> solo sobre los grupos coincidentes.</li>
+      <li>Toda la E/S en <code>Dispatchers.IO</code>; estado por <code>StateFlow</code> y progreso
+        por <code>Flow</code>.</li>
+    </ul>
+
+    <h3>Visores integrados</h3>
+    <table class="spec">
+      <thead><tr><th>Visor</th><th>Motor</th></tr></thead>
+      <tbody>
+        <tr><td>Imagen — zoom, paneo, rotación</td><td><code>pointerInput</code> + Coil</td></tr>
+        <tr><td>Texto / registros — streaming y memoria acotada</td><td><code>BufferedReader</code></td></tr>
+        <tr><td>PDF — páginas perezosas</td><td><code>PdfRenderer</code></td></tr>
+        <tr><td>ZIP / TAR / GZ — navegación virtual</td><td><code>java.util.zip</code> + lector TAR propio</td></tr>
+      </tbody>
+    </table>
+    <p>El audio, el vídeo, los documentos de ofimática y el resto de formatos se entregan a la
+      aplicación externa adecuada mediante <code>ACTION_VIEW</code> con su tipo MIME y permiso de
+      lectura temporal.</p>
+
+    <h3>Análisis y herramientas</h3>
+    <p>Analizador de espacio en <em>treemap squarified</em> dibujado en <code>Canvas</code>,
+      limpiador de carpetas vacías, buscador de duplicados, filtro de APK y benchmark de
+      almacenamiento con lectura real de volumen.</p>
+  </section>
+
+  <section id="tecnologia" class="section">
+    <p class="eyebrow">03 · Tecnología</p>
+    <h2>Pila y versiones</h2>
+    <p>Todas las versiones citadas corresponden al catálogo <code>gradle/libs.versions.toml</code>.</p>
+    <table class="spec" id="tech-table">
+      <thead><tr><th>Capa</th><th>Componente</th><th>Versión</th></tr></thead>
+      <tbody>
+        <tr><td>Lenguaje</td><td>Kotlin</td><td>2.0.21</td></tr>
+        <tr><td>Compilación</td><td>Android Gradle Plugin</td><td>8.7.3</td></tr>
+        <tr><td>Build</td><td>Gradle (wrapper oficial)</td><td>8.10.2</td></tr>
+        <tr><td>Plataforma</td><td>Android SDK</td><td>minSdk 26 · target 35 · JDK 17</td></tr>
+        <tr><td>UI</td><td>Jetpack Compose — BOM</td><td>2024.10.01</td></tr>
+        <tr><td>UI</td><td>Material&nbsp;3 · iconos extendidos</td><td>BOM</td></tr>
+        <tr><td>Núcleo</td><td>androidx.core-ktx</td><td>1.15.0</td></tr>
+        <tr><td>Núcleo</td><td>activity-compose</td><td>1.9.3</td></tr>
+        <tr><td>Ciclo de vida</td><td>lifecycle-runtime · viewmodel · compose</td><td>2.8.7</td></tr>
+        <tr><td>Imágenes</td><td>Coil</td><td>2.7.0</td></tr>
+        <tr><td>Almacenamiento</td><td>androidx.documentfile</td><td>1.0.1</td></tr>
+        <tr><td>Tests</td><td>JUnit 4</td><td>4.13.2</td></tr>
+      </tbody>
+    </table>
+    <p>Sin Room, sin Retrofit, sin Koin/Hilt: la composición de dependencias es un contenedor
+      manual (<code>AppContainer</code>), la persistencia ligera usa <code>SharedPreferences</code>
+      y el índice de búsqueda se guarda en el almacenamiento privado de la aplicación.</p>
+  </section>
+
+  <section id="arquitectura" class="section">
+    <p class="eyebrow">04 · Arquitectura</p>
+    <h2>Estructura del proyecto</h2>
+    <pre class="tree" aria-label="Estructura de directorios"><code>app/src/main/java/com/apex/files
+├─ core/    AppContainer (DI manual) · ajustes · hashing · progreso
+├─ data/    modelo · FsRepository (enrutador File/SAF) · índice · TAR · MediaStore
+├─ tools/   limpiador · duplicados SHA-256 · APK · treemap · benchmark
+└─ ui/      tema OLED · componentes · pantallas + ViewModels
+.github/workflows
+├─ release.yml       pipeline de publicación (push a main)
+└─ code-quality.yml  análisis completo + todos los tests (PR y ramas)</code></pre>
+    <ul class="plain">
+      <li><strong>Modelo-vista independiente de Android:</strong> los ViewModels exponen
+        <code>StateFlow</code> y las pantallas consumen estado inmutable.</li>
+      <li><strong>Doble backend de archivos:</strong> <code>java.io.File</code> para el acceso
+        total y <code>DocumentFile</code> para los árboles SAF; un único repositorio
+        (<code>FsRepository</code>) enruta cada nodo según lleve URI de contenido.</li>
+      <li><strong>Navegación propia:</strong> pila de pantallas en memoria
+        (<code>Navigator</code>) con tecla atrás gestionada por <code>BackHandler</code>.</li>
+      <li><strong>Compilación optimizada:</strong> R8 con <em>minify</em> y
+        <em>shrinkResources</em>, y APK divididos por ABI.</li>
+    </ul>
+  </section>
+
+  <section id="versiones" class="section">
+    <p class="eyebrow">05 · Versiones</p>
+    <h2>Historial y esquema de versionado</h2>
+    <p>Cada publicación se etiqueta automáticamente como <code>v1.0.&lt;n&gt;</code>, donde
+      <code>&lt;n&gt;</code> es el número de ejecución del pipeline de GitHub Actions sobre
+      <code>main</code>. Las notas de cada release se generan desde <code>git log</code>.</p>
+
+    <div id="version-list" class="vlist" aria-live="polite"></div>
+
+    <p class="note" id="version-note"></p>
+  </section>
+
+  <section id="descargas" class="section">
+    <p class="eyebrow">06 · Descargas e instalación</p>
+    <h2>Obtener la aplicación</h2>
+    <p>Todas las publicaciones se alojan en GitHub Releases. Cada versión incluye un APK por
+      arquitectura, un APK universal y el fichero <code>SHA256SUMS.txt</code> con los checksums.</p>
+
+    <table class="spec">
+      <thead><tr><th>Artefacto</th><th>Arquitectura</th><th>Uso</th></tr></thead>
+      <tbody>
+        <tr><td><code>…-arm64-v8a.apk</code></td><td>ARM64</td><td>Teléfonos y tabletas actuales</td></tr>
+        <tr><td><code>…-armeabi-v7a.apk</code></td><td>ARM32</td><td>Dispositivos antiguos</td></tr>
+        <tr><td><code>…-x86_64.apk</code></td><td>x64</td><td>Emuladores y equipos x86_64</td></tr>
+        <tr><td><code>…-universal.apk</code></td><td>Todas</td><td>Distribución simple</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Selector de descarga</h3>
+    <p>Elija una arquitectura para obtener el nombre exacto del artefacto y su URL de descarga.</p>
+    <div class="builder">
+      <label class="field">
+        <span>Arquitectura</span>
+        <select id="abi-select">
+          <option value="arm64-v8a" selected>arm64-v8a — teléfonos actuales</option>
+          <option value="armeabi-v7a">armeabi-v7a — dispositivos antiguos</option>
+          <option value="x86_64">x86_64 — emuladores</option>
+          <option value="universal">universal — todas</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Versión (ejemplo)</span>
+        <select id="ver-select">
+          <option value="latest" selected>latest — última release publicada</option>
+        </select>
+      </label>
+      <div class="output">
+        <code id="artifact-name">APEX-latest-arm64-v8a.apk</code>
+        <button class="quiet copy" type="button" data-copy="#artifact-name">Copiar nombre</button>
+      </div>
+      <div class="output">
+        <code id="artifact-url" class="wrap">https://github.com/LiebeBlack/EX/releases/latest</code>
+        <button class="quiet copy" type="button" data-copy="#artifact-url">Copiar URL</button>
+      </div>
+    </div>
+
+    <h3>Instalación</h3>
+    <ol class="plain">
+      <li>Descargue el APK de su arquitectura (o el <code>-universal</code>).</li>
+      <li>Verifique el checksum: <code class="inline">sha256sum -c SHA256SUMS.txt</code>.</li>
+      <li>Instale permitiendo <em>orígenes desconocidos</em> y conceda <strong>Acceso a todos los
+        archivos</strong> en el primer arranque.</li>
+    </ol>
+
+    <h3>Compilar desde el código</h3>
+    <p>Requisitos: JDK&nbsp;17 y Android Studio. Sin <code>gradlew</code>, abra la carpeta en
+      Android Studio para regenerarlo desde <code>gradle-wrapper.properties</code>.</p>
+    <pre class="code"><code>./gradlew assembleDebug        # APK de depuración
+./gradlew assembleRelease      # release firmado (debug si no hay keystore)
+./gradlew testDebugUnitTest    # tests unitarios JVM</code></pre>
+  </section>
+
+  <section id="desarrollador" class="section">
+    <p class="eyebrow">07 · Desarrollador</p>
+    <h2>Autoría y enlaces</h2>
+    <p>Proyecto desarrollado y mantenido por <strong>LiebeBlack</strong>. Código, historial y
+      seguimiento de incidencias en GitHub; la documentación vive en la carpeta
+      <code>docs/</code> de este mismo repositorio.</p>
+    <div class="links">
+      <a class="quiet" href="https://github.com/LiebeBlack" rel="noopener">github.com/LiebeBlack</a>
+      <a class="quiet" href="https://github.com/LiebeBlack/EX" rel="noopener">Repositorio</a>
+      <a class="quiet" href="https://github.com/LiebeBlack/EX/releases" rel="noopener">Releases</a>
+      <a class="quiet" href="https://github.com/LiebeBlack/EX/issues" rel="noopener">Incidencias</a>
+    </div>
+    <p class="note">© 2026 LiebeBlack · Licencia por confirmar · APEX no recopila datos:
+      sin permiso de red, la aplicación no puede transmitir información alguna.</p>
+  </section>
+
+</main>
+
+<footer class="colophon">
+  <div class="shell">
+    <p>APEX File Manager — documentación técnica · escrita a mano, sin generadores ·
+      <span id="footer-theme">tema automático</span></p>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

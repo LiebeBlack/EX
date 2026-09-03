@@ -7,6 +7,7 @@ import coil.memory.MemoryCache
 import coil.util.DebugLogger
 import com.apex.files.data.fs.ArchiveRepository
 import com.apex.files.data.fs.FsRepository
+import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.fs.MemoryIndex
 import com.apex.files.data.media.MediaStoreRepository
 import com.apex.files.data.storage.DrivesRepository
@@ -28,6 +29,7 @@ class AppContainer(context: Context) {
     val settings: SettingsRepository by lazy { SettingsRepository(appContext) }
     val fs: FsRepository by lazy { FsRepository(appContext) }
     val index: MemoryIndex by lazy { MemoryIndex() }
+    val indexStore: IndexStore by lazy { IndexStore(appContext) }
     val mediaStore: MediaStoreRepository by lazy { MediaStoreRepository(appContext) }
     val drives: DrivesRepository by lazy { DrivesRepository(appContext) }
 

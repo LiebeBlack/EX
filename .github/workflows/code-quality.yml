@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: code-quality-${{ github.ref }}
@@ -73,6 +74,16 @@ jobs:
 
       - name: Static analysis (Android Lint, every check)
         run: ./gradlew --no-daemon lintDebug
+
+      - name: Upload lint report (available when the job fails)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          if-no-files-found: ignore
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
 
       - name: Surface any compile warnings for review
         if: always()

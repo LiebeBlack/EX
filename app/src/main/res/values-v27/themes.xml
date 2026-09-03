@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    API 27+: android:windowLightNavigationBar only exists from API 27 on,
+    and minSdk is 26, so it lives in its own qualifier folder. Values are
+    merged per item with the base theme in values/themes.xml.
+-->
+<resources>
+    <style name="Theme.Apex">
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

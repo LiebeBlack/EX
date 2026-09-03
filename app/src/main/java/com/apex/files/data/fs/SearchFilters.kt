@@ -81,6 +81,25 @@ class MemoryIndex {
         count = 0
     }
 
+    /** Snapshot of every indexed plain file (for persistence). */
+    fun allFiles(): List<FileNode> {
+        val out = ArrayList<FileNode>(map.size)
+        for (n in map.values) {
+            if (!n.isDir) out.add(n)
+        }
+        return out
+    }
+
+    /** Fills the index from a persisted snapshot (skips directories). */
+    fun restore(nodes: Collection<FileNode>) {
+        clear()
+        for (n in nodes) {
+            if (count >= CAP) break
+            if (n.isDir) continue
+            if (map.putIfAbsent(n.path, n) == null) count++
+        }
+    }
+
     fun search(
         query: String,
         sizeBand: SearchFilters.SizeBand? = null,

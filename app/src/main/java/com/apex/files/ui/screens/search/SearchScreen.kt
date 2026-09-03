@@ -3,6 +3,7 @@ package com.apex.files.ui.screens.search
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,16 +30,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.apex.files.Screen
 import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.SearchFilters
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.FileNode
+import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
+import com.apex.files.ui.NodeOpener
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.ApexTopBar
@@ -52,6 +58,8 @@ import com.apex.files.ui.theme.MonoTextStyleSmall
 @Composable
 fun SearchScreen() {
     val navigator = LocalNavigator.current
+    val container = LocalContainer.current
+    val context = LocalContext.current
     val vm: SearchViewModel = apexViewModel(key = "search") { c -> SearchViewModel(c) }
     val state by vm.state.collectAsStateWithLifecycle()
 
@@ -99,7 +107,9 @@ fun SearchScreen() {
             } else {
                 items(state.results, key = { it.path }) { node ->
                     SearchResultRow(node) {
-                        navigator.push(Screen.TextViewer(node))
+                        NodeOpener.open(node, container, navigator, context) { msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -109,12 +119,19 @@ fun SearchScreen() {
 
 @Composable
 private fun SearchField(state: SearchViewModel.UiState, vm: SearchViewModel) {
+    // Tapping anywhere in the pill (icon, padding, placeholder) focuses the
+    // field and raises the keyboard — not just the narrow text strip.
+    val focusRequester = remember { FocusRequester() }
     Row(
         Modifier
             .fillMaxWidth()
             .clip(ApexShapes.small)
             .background(ApexContainer)
             .border(1.dp, ApexBorder, ApexShapes.small)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { focusRequester.requestFocus() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -144,7 +161,7 @@ private fun SearchField(state: SearchViewModel.UiState, vm: SearchViewModel) {
                 }
                 inner()
             },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).focusRequester(focusRequester),
         )
     }
 }
@@ -186,6 +203,7 @@ private fun FilterRow(state: SearchViewModel.UiState, vm: SearchViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.size(6.dp))
+            val extFocus = remember { FocusRequester() }
             BasicTextField(
                 value = state.extFilter,
                 onValueChange = vm::setExtFilter,
@@ -211,6 +229,11 @@ private fun FilterRow(state: SearchViewModel.UiState, vm: SearchViewModel) {
                     .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(ApexContainer)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { extFocus.requestFocus() }
+                    .focusRequester(extFocus)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             )
         }

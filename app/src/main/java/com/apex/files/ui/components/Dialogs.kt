@@ -1,5 +1,6 @@
 package com.apex.files.ui.components
 
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +72,9 @@ fun InputDialog(
                 singleLine = true,
                 placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (value.isNotBlank()) onConfirm(value.trim())
+                }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = ApexContainer,
                     unfocusedContainerColor = ApexContainer,

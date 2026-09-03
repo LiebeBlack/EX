@@ -24,6 +24,12 @@ Cero dependencias · Cero red · 100% local
 
 ---
 
+## 📚 Documentación
+
+Web formal y minimalista en [`docs/`](docs/index.html) — descripción, funcionalidades, tecnologías, arquitectura, historial de versiones y guía de descarga: **[Abrir documentación](docs/index.html)**.
+
+---
+
 ## 📖 Descripción
 
 APEX es un explorador de archivos tipo **CX File Explorer** con estética **Ultra Moderna, Minimalista y Premium Dark OLED**. Está pensado como una herramienta de alto rendimiento: navegación instantánea, herramientas de limpieza 100% algorítmicas y visores nativos — **sin librerías de terceros, sin servicios en segundo plano, sin Internet y sin Inteligencia Artificial**.

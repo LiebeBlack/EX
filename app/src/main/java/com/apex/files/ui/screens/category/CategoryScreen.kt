@@ -1,5 +1,6 @@
 package com.apex.files.ui.screens.category
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +41,7 @@ import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
+import com.apex.files.ui.NodeOpener
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.EmptyState
@@ -48,14 +50,25 @@ import com.apex.files.ui.components.NeonProgressBar
 import com.apex.files.ui.theme.ApexShapes
 import com.apex.files.ui.theme.ApexSurface1
 import com.apex.files.ui.theme.MonoTextStyleSmall
+import java.io.File
 
 @Composable
 fun CategoryScreen(category: Category) {
     val container = LocalContainer.current
     val navigator = LocalNavigator.current
+    val context = LocalContext.current
     val key = remember { "category-${category.name}" }
     val vm: CategoryViewModel = apexViewModel(key = key) { c -> CategoryViewModel(c, category) }
     val state by vm.state.collectAsStateWithLifecycle()
+
+    fun openFile(node: FileNode) {
+        when {
+            category == Category.IMAGE -> navigator.push(Screen.ImageViewer(node))
+            else -> NodeOpener.open(node, container, navigator, context) { msg ->
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         ApexTopBar(
@@ -85,12 +98,7 @@ fun CategoryScreen(category: Category) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(state.nodes, key = { it.path + it.name }) { node ->
-                    CategoryTile(node, category) {
-                        when {
-                            category == Category.IMAGE -> navigator.push(Screen.ImageViewer(node))
-                            else -> navigator.push(Screen.TextViewer(node))
-                        }
-                    }
+                    CategoryTile(node, category) { openFile(node) }
                 }
             }
         }
@@ -115,11 +123,11 @@ private fun CategoryTile(node: FileNode, category: Category, onClick: () -> Unit
                 .background(ApexSurface1),
             contentAlignment = Alignment.Center,
         ) {
-            if (category == Category.IMAGE || category == Category.VIDEO || category == Category.AUDIO) {
+            if (category == Category.IMAGE) {
                 val context = LocalContext.current
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(node.uri)
+                        .data(node.uri ?: File(node.path))
                         .size(160)
                         .build(),
                     contentDescription = node.name,

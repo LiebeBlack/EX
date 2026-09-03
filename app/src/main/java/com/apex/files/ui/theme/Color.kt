@@ -15,7 +15,7 @@ val ApexAmber = Color(0xFFFFAB00)          // Acento alternativo
 val ApexDanger = Color(0xFFFF2A6D)         // Alerta / peligro
 val ApexTextPrimary = Color(0xFFFFFFFF)
 val ApexTextSecondary = Color(0xFF8E8E93)
-val ApexTextMuted = Color(0xFF48484A)
+val ApexTextMuted = Color(0xFF75757C)
 
 /** Maps the selected accent preset to its Color. */
 fun accentColor(accent: Accent): Color = when (accent) {
