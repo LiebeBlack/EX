@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    API 27+: android:windowLightNavigationBar only exists from API 27 on,
-    and minSdk is 26, so it lives in its own qualifier folder. Values are
-    merged per item with the base theme in values/themes.xml.
+    API 27+ variant of the dark theme. android:windowLightNavigationBar
+    only exists from API 27 on (minSdk is 26), so it lives in this
+    qualifier folder. The style is repeated in full so the variant is
+    self-contained regardless of resource-merge behaviour.
 -->
 <resources>
-    <style name="Theme.Apex">
+    <style name="Theme.Apex" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">#00E5FF</item>
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>
