@@ -31,11 +31,19 @@ object NodeOpener {
         navigator: Navigator,
         context: Context,
         onUnavailable: (String) -> Unit = {},
+        imageContext: List<FileNode> = emptyList(),
     ) {
         // Every open lands in the Home "Recientes" list (files only).
         if (!node.isDir) container.recents.record(node)
         when {
-            node.category == Category.IMAGE -> navigator.push(Screen.ImageViewer(node))
+            node.category == Category.IMAGE -> {
+                // Gallery: pass the surrounding images so the viewer can
+                // swipe left/right; without context the file opens alone.
+                val images = if (imageContext.isEmpty()) listOf(node)
+                else imageContext.filter { it.category == Category.IMAGE && !it.isDir }
+                val index = images.indexOfFirst { it.path == node.path }.coerceAtLeast(0)
+                navigator.push(Screen.ImageViewer(images, index))
+            }
             FileKinds.isText(node) -> navigator.push(Screen.TextViewer(node))
             node.extension == "pdf" -> navigator.push(Screen.PdfViewer(node))
             container.archive.isSupported(node) -> navigator.push(Screen.ArchiveViewer(node))

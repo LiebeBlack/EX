@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
@@ -170,6 +171,27 @@ fun HomeScreen() {
                 item { ToolCard(Icons.Outlined.ContentCopy, "Buscador de Duplicados", "Detección por SHA-256") { navigator.push(Screen.Duplicates) } }
                 item { ToolCard(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) } }
                 item { ToolCard(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") { navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot()))) } }
+            }
+        }
+
+        // ---- Storage insights ----
+        item {
+            ApexCard(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp),
+                onClick = { navigator.push(Screen.Stats) },
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Insights, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Estadísticas de almacenamiento", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Tipos de archivo, tamaños y más grandes",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
 

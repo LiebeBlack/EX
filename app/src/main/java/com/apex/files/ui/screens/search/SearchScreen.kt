@@ -115,7 +115,7 @@ fun SearchScreen() {
             } else {
                 items(state.results, key = { it.path }) { node ->
                     SearchResultRow(node) {
-                        NodeOpener.open(node, container, navigator, context) { msg ->
+                        NodeOpener.open(node, container, navigator, context, imageContext = state.results) { msg ->
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         }
                     }

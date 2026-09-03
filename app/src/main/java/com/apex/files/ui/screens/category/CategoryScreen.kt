@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.apex.files.Screen
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
 import com.apex.files.ui.LocalContainer
@@ -62,11 +61,8 @@ fun CategoryScreen(category: Category) {
     val state by vm.state.collectAsStateWithLifecycle()
 
     fun openFile(node: FileNode) {
-        when {
-            category == Category.IMAGE -> navigator.push(Screen.ImageViewer(node))
-            else -> NodeOpener.open(node, container, navigator, context) { msg ->
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            }
+        NodeOpener.open(node, container, navigator, context, imageContext = state.nodes) { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
@@ -30,9 +32,11 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -100,7 +105,7 @@ fun ExplorerScreen(location: Location) {
     }
 
     fun openFile(node: FileNode) {
-        NodeOpener.open(node, container, navigator, context) { msg -> toast(msg) }
+        NodeOpener.open(node, container, navigator, context, imageContext = state.entries) { msg -> toast(msg) }
     }
 
     fun shareSelected() {
@@ -203,68 +208,86 @@ fun ExplorerScreen(location: Location) {
         }
 
         when {
-            state.loading -> {
+            state.loading && state.entries.isEmpty() -> {
                 Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
                     NeonProgressBar(progress = null, modifier = Modifier.padding(horizontal = 40.dp))
                 }
             }
             state.error != null -> {
-                EmptyState(Icons.Outlined.FolderOpen, state.error ?: "Error")
+                RefreshableBox(
+                    refreshing = false,
+                    onRefresh = { vm.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    RefreshableEmpty(Icons.Outlined.FolderOpen, state.error ?: "Error")
+                }
             }
             state.entries.isEmpty() -> {
-                EmptyState(Icons.Outlined.FolderOpen, "Carpeta vacía")
+                RefreshableBox(
+                    refreshing = false,
+                    onRefresh = { vm.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    RefreshableEmpty(Icons.Outlined.FolderOpen, "Carpeta vacía")
+                }
             }
             else -> {
-                if (state.viewMode == com.apex.files.data.model.ViewMode.LIST) {
-                    LazyColumn(
-                        Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        items(state.entries, key = { it.path }) { node ->
-                            FileRow(
-                                node = node,
-                                selected = node.path in state.selection,
-                                onClick = {
-                                    when {
-                                        state.selectionMode -> vm.toggleSelect(node)
-                                        state.destMode != null -> if (node.isDir) vm.openDir(node)
-                                        node.isDir -> vm.openDir(node)
-                                        else -> openFile(node)
-                                    }
-                                },
-                                onLongClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    vm.enterSelection(node)
-                                },
-                            )
+                RefreshableBox(
+                    refreshing = state.loading,
+                    onRefresh = { vm.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    if (state.viewMode == com.apex.files.data.model.ViewMode.LIST) {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            items(state.entries, key = { it.path }) { node ->
+                                FileRow(
+                                    node = node,
+                                    selected = node.path in state.selection,
+                                    onClick = {
+                                        when {
+                                            state.selectionMode -> vm.toggleSelect(node)
+                                            state.destMode != null -> if (node.isDir) vm.openDir(node)
+                                            node.isDir -> vm.openDir(node)
+                                            else -> openFile(node)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        vm.enterSelection(node)
+                                    },
+                                )
+                            }
                         }
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 104.dp),
-                        Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(state.entries, key = { it.path }) { node ->
-                            GridTile(
-                                node = node,
-                                selected = node.path in state.selection,
-                                onClick = {
-                                    when {
-                                        state.selectionMode -> vm.toggleSelect(node)
-                                        state.destMode != null -> if (node.isDir) vm.openDir(node)
-                                        node.isDir -> vm.openDir(node)
-                                        else -> openFile(node)
-                                    }
-                                },
-                                onLongClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    vm.enterSelection(node)
-                                },
-                            )
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 104.dp),
+                            Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(state.entries, key = { it.path }) { node ->
+                                GridTile(
+                                    node = node,
+                                    selected = node.path in state.selection,
+                                    onClick = {
+                                        when {
+                                            state.selectionMode -> vm.toggleSelect(node)
+                                            state.destMode != null -> if (node.isDir) vm.openDir(node)
+                                            node.isDir -> vm.openDir(node)
+                                            else -> openFile(node)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        vm.enterSelection(node)
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -357,5 +380,31 @@ fun ExplorerScreen(location: Location) {
                 toast("Copiado")
             },
         )
+    }
+}
+
+/** Material3 pull-to-refresh wrapper used by the list/grid/empty/error states. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RefreshableBox(
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = onRefresh,
+        modifier = modifier,
+    ) {
+        content()
+    }
+}
+
+/** Empty/error content on a scrollable surface so pull-to-refresh works there too. */
+@Composable
+private fun RefreshableEmpty(icon: ImageVector, message: String) {
+    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        EmptyState(icon, message)
     }
 }

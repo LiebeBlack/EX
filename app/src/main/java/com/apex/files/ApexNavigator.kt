@@ -18,9 +18,13 @@ sealed class Screen {
     data object Cleaner : Screen()
     data object Duplicates : Screen()
     data object Apk : Screen()
+    data object Stats : Screen()
     data class SpaceAnalyzer(val location: Location, override val serial: Int = 0) : Screen()
     data object Benchmark : Screen()
-    data class ImageViewer(val node: FileNode, override val serial: Int = 0) : Screen()
+    /** Full-screen image gallery: [nodes] are the neighboring images of the
+     *  opened file (at least the file itself) and [index] the position to
+     *  start from. Swiping left/right moves between them. */
+    data class ImageViewer(val nodes: List<FileNode>, val index: Int = 0, override val serial: Int = 0) : Screen()
     data class TextViewer(val node: FileNode, override val serial: Int = 0) : Screen()
     data class PdfViewer(val node: FileNode, override val serial: Int = 0) : Screen()
     data class ArchiveViewer(val node: FileNode, override val serial: Int = 0) : Screen()
@@ -67,6 +71,7 @@ class Navigator(initial: Screen = Screen.Home) {
         is Screen.Cleaner -> screen
         is Screen.Duplicates -> screen
         is Screen.Apk -> screen
+        is Screen.Stats -> screen
         is Screen.SpaceAnalyzer -> screen.copy(serial = n)
         is Screen.Benchmark -> screen
         is Screen.ImageViewer -> screen.copy(serial = n)
