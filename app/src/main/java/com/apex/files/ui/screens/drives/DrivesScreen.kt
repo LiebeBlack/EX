@@ -158,7 +158,7 @@ private fun DriveCard(
             }
             if (volume.safUri != null) {
                 Spacer(Modifier.width(6.dp))
-                ApexIconButton(Icons.Outlined.Close, "Desconectar", onDisconnect)
+                ApexIconButton(Icons.Outlined.Close, "Desconectar", onClick = onDisconnect)
             }
         }
     }

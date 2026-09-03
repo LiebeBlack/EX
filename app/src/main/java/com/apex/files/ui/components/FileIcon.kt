@@ -1,5 +1,6 @@
 package com.apex.files.ui.components
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack

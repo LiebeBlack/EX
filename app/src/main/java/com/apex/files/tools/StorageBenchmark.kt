@@ -58,7 +58,7 @@ class StorageBenchmark(private val context: Context, private val fs: FsRepositor
             withContext(Dispatchers.IO) {
                 if (file != null) {
                     file.delete()
-                } else {
+                } else if (location is Location.Saf) {
                     val root = SafRepository(context).document(
                         FileNode.forDirectory(location.label, location.label, uri = location.rootUri, isRoot = true)
                     )

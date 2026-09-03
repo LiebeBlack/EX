@@ -17,7 +17,7 @@ enum class HashAlgorithm(val id: String) {
 /** Streaming digest computation, cancellable via [isActive]. */
 object HashUtil {
 
-    fun hash(stream: InputStream, algorithm: HashAlgorithm, isActive: () -> Boolean = { true }): String {
+    suspend fun hash(stream: InputStream, algorithm: HashAlgorithm, isActive: suspend () -> Boolean = { true }): String {
         val digest = MessageDigest.getInstance(algorithm.id)
         val buffer = ByteArray(64 * 1024)
         while (true) {

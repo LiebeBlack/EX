@@ -14,9 +14,9 @@ import androidx.compose.ui.unit.dp
 fun ApexIconButton(
     icon: ImageVector,
     contentDescription: String?,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onBackground,
+    onClick: () -> Unit,
 ) {
     IconButton(onClick = onClick, modifier = modifier) {
         Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(22.dp))

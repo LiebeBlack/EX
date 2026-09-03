@@ -2,6 +2,7 @@ package com.apex.files.data.fs
 
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
+import java.io.File
 
 /** Size / date / extension filter definitions shared by global search. Pure JVM. */
 object SearchFilters {

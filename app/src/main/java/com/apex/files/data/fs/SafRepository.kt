@@ -79,14 +79,14 @@ class SafRepository(private val context: Context) {
 
     // ---------------------------------------------------------------- delete
 
-    suspend fun delete(node: FileNode, onProgress: (OpProgress) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun delete(node: FileNode, onProgress: suspend (OpProgress) -> Unit) = withContext(Dispatchers.IO) {
         val doc = document(node) ?: return@withContext
         val total = countFiles(doc)
         val sink = ProgressSink(OpType.DELETE, onProgress)
         deleteRecursive(doc, sink, total)
     }
 
-    private fun deleteRecursive(doc: DocumentFile, sink: ProgressSink, total: Int): Int {
+    private suspend fun deleteRecursive(doc: DocumentFile, sink: ProgressSink, total: Int): Int {
         var done = 0
         try {
             if (doc.isDirectory) {
@@ -107,7 +107,7 @@ class SafRepository(private val context: Context) {
 
     // ------------------------------------------------------------------ copy
 
-    suspend fun copy(src: FileNode, destDir: FileNode, onProgress: (OpProgress) -> Unit) =
+    suspend fun copy(src: FileNode, destDir: FileNode, onProgress: suspend (OpProgress) -> Unit) =
         withContext(Dispatchers.IO) {
             val srcDoc = document(src) ?: return@withContext
             val destDoc = document(destDir) ?: return@withContext
@@ -117,7 +117,7 @@ class SafRepository(private val context: Context) {
             copyRecursive(srcDoc, destDoc, sink, total)
         }
 
-    private fun copyRecursive(src: DocumentFile, destDir: DocumentFile, sink: ProgressSink, total: Long) {
+    private suspend fun copyRecursive(src: DocumentFile, destDir: DocumentFile, sink: ProgressSink, total: Long) {
         if (src.isDirectory) {
             val dest = destDir.createDirectory(uniqueDirName(destDir, src.name ?: "carpeta")) ?: return
             for (c in src.listFiles()) copyRecursive(c, dest, sink, total)
@@ -136,7 +136,7 @@ class SafRepository(private val context: Context) {
 
     // ------------------------------------------------------------------ move
 
-    suspend fun move(src: FileNode, destDir: FileNode, onProgress: (OpProgress) -> Unit) =
+    suspend fun move(src: FileNode, destDir: FileNode, onProgress: suspend (OpProgress) -> Unit) =
         withContext(Dispatchers.IO) {
             val srcDoc = document(src) ?: return@withContext
             val destDoc = document(destDir) ?: return@withContext
@@ -221,7 +221,7 @@ class SafRepository(private val context: Context) {
         return candidate
     }
 
-    private fun copyStream(
+    private suspend fun copyStream(
         src: InputStream?,
         dest: OutputStream?,
         sink: ProgressSink,
@@ -257,10 +257,10 @@ class SafRepository(private val context: Context) {
 
     private class ProgressSink(
         private val type: OpType,
-        private val onProgress: (OpProgress) -> Unit,
+        private val onProgress: suspend (OpProgress) -> Unit,
     ) {
         private val tracker = SpeedTracker()
-        fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
+        suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             val speed = tracker.update(bytesDone)
             onProgress(OpProgress(type, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }

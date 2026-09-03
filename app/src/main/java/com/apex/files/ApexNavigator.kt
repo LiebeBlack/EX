@@ -12,7 +12,7 @@ sealed class Screen {
     data object Home : Screen()
     data class Explorer(val location: Location, override val serial: Int = 0) : Screen()
     data class Search(override val serial: Int = 0) : Screen()
-    data class Category(val category: Category, override val serial: Int = 0) : Screen()
+    data class Category(val category: com.apex.files.data.model.Category, override val serial: Int = 0) : Screen()
     data object Drives : Screen()
     data object Settings : Screen()
     data object Cleaner : Screen()

@@ -70,7 +70,7 @@ fun SelectionBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                ApexIconButton(Icons.Outlined.Close, "Limpiar", onClear, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                ApexIconButton(Icons.Outlined.Close, "Limpiar", onClick = onClear, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),

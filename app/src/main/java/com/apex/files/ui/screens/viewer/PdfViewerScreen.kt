@@ -82,7 +82,7 @@ fun PdfViewerScreen(node: FileNode) {
                             androidx.compose.foundation.Image(
                                 bitmap = bmp.asImageBitmap(),
                                 contentDescription = "Página ${index + 1}",
-                                contentScale = ContentScale.FitWidth,
+                                contentScale = ContentScale.FillWidth,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 2.dp),

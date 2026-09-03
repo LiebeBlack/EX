@@ -153,7 +153,7 @@ class ExplorerViewModel(
         _state.update { s ->
             val sel = s.selection.toMutableSet()
             if (!sel.add(node.path)) sel.remove(node.path)
-            it.copy(selection = sel, selectionMode = sel.isNotEmpty())
+            s.copy(selection = sel, selectionMode = sel.isNotEmpty())
         }
     }
 

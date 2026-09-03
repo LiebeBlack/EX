@@ -15,7 +15,7 @@ object Permissions {
 
     fun allFilesGranted(context: Context): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager(context)
+            Environment.isExternalStorageManager()
         } else {
             ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                 PackageManager.PERMISSION_GRANTED

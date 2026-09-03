@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -155,23 +156,25 @@ private fun TreemapCanvas(
         if (canvasWidth <= 0f) emptyList()
         else TreemapLayout.layout(node.children, canvasWidth, canvasHeight)
     }
+    val accent = MaterialTheme.colorScheme.primary
+    val onBackground = MaterialTheme.colorScheme.onBackground
 
     Canvas(
         modifier
             .fillMaxWidth()
+            .onSizeChanged { size ->
+                canvasWidth = size.width.toFloat()
+                canvasHeight = size.height.toFloat()
+            }
             .pointerInput(rects) {
                 detectTapGestures { pos ->
                     rects.firstOrNull { it.contains(pos.x, pos.y) }?.let { onDrill(it.node) }
                 }
             },
-        onSizeChanged = { size ->
-            canvasWidth = size.width.toFloat()
-            canvasHeight = size.height.toFloat()
-        },
     ) {
         for (rect in rects) {
             drawRoundRect(
-                color = colorFor(rect.node, MaterialTheme.colorScheme.primary),
+                color = colorFor(rect.node, accent),
                 topLeft = androidx.compose.ui.geometry.Offset(rect.x, rect.y),
                 size = Size(rect.w, rect.h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
@@ -201,7 +204,7 @@ private fun TreemapCanvas(
         val label = textMeasurer.measure(
             SizeFormatter.format(node.size),
             style = androidx.compose.ui.text.TextStyle(
-                color = MaterialTheme.colorScheme.onBackground,
+                color = onBackground,
                 fontSize = 10.sp,
             ),
         )

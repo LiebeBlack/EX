@@ -4,9 +4,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +71,7 @@ fun InputDialog(
                 singleLine = true,
                 placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                colors = TextFieldDefaults.colors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = ApexContainer,
                     unfocusedContainerColor = ApexContainer,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,

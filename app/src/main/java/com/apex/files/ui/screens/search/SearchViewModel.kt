@@ -24,7 +24,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val extFilter: String = "",
         val results: List<FileNode> = emptyList(),
         val searching: Boolean = false,
-        val indexed: Int = container.index.size,
+        val indexed: Int = 0,
     )
 
     private val _state = MutableStateFlow(UiState(indexed = container.index.size))

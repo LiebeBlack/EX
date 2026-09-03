@@ -47,7 +47,7 @@ class DuplicatesViewModel(private val container: AppContainer) : ViewModel() {
                     it.copy(
                         currentPath = scan.currentPath,
                         hashed = scan.hashed,
-                        total = scan.total,
+                        total = scan.totalCandidates,
                         groups = if (scan.done) scan.groups else it.groups,
                         done = scan.done,
                         scanning = !scan.done,
@@ -62,7 +62,7 @@ class DuplicatesViewModel(private val container: AppContainer) : ViewModel() {
             val set = s.expanded.toMutableSet()
             val key = group.hash
             if (!set.add(key)) set.remove(key)
-            it.copy(expanded = set)
+            s.copy(expanded = set)
         }
     }
 
@@ -70,7 +70,7 @@ class DuplicatesViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { s ->
             val sel = s.selection.toMutableSet()
             if (!sel.add(path)) sel.remove(path)
-            it.copy(selection = sel)
+            s.copy(selection = sel)
         }
     }
 
@@ -78,7 +78,7 @@ class DuplicatesViewModel(private val container: AppContainer) : ViewModel() {
     fun selectDuplicates() {
         _state.update { s ->
             val sel = s.groups.flatMap { it.files.drop(1).map { f -> f.path } }.toSet()
-            it.copy(selection = sel)
+            s.copy(selection = sel)
         }
     }
 

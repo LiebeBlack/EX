@@ -54,7 +54,7 @@ class ApkViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { s ->
             val sel = s.selection.toMutableSet()
             if (!sel.add(path)) sel.remove(path)
-            it.copy(selection = sel)
+            s.copy(selection = sel)
         }
     }
 

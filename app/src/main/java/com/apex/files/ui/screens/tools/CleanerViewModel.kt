@@ -60,7 +60,7 @@ class CleanerViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { s ->
             val sel = s.selection.toMutableSet()
             if (!sel.add(node.path)) sel.remove(node.path)
-            it.copy(selection = sel)
+            s.copy(selection = sel)
         }
     }
 

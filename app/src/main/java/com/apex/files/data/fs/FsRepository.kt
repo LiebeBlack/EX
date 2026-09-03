@@ -83,7 +83,7 @@ class FsRepository(private val context: Context) {
 
     // ------------------------------------------------------------ deletion
 
-    suspend fun delete(node: FileNode, onProgress: (OpProgress) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun delete(node: FileNode, onProgress: suspend (OpProgress) -> Unit) = withContext(Dispatchers.IO) {
         if (node.uri != null) {
             saf.delete(node, onProgress)
             return@withContext
@@ -95,7 +95,7 @@ class FsRepository(private val context: Context) {
         deleteRecursive(file, sink, total)
     }
 
-    private fun deleteRecursive(file: File, sink: ProgressSink, total: Int): Int {
+    private suspend fun deleteRecursive(file: File, sink: ProgressSink, total: Int): Int {
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
         var done = 0
         if (file.isDirectory && !Paths.isSymlink(file)) {
@@ -110,7 +110,7 @@ class FsRepository(private val context: Context) {
         return done
     }
 
-    private fun deleteFile(file: File, sink: ProgressSink, total: Int): Int {
+    private suspend fun deleteFile(file: File, sink: ProgressSink, total: Int): Int {
         return if (file.delete()) {
             sink.emit(1L, null, 1, total, file.name)
             1
@@ -121,7 +121,7 @@ class FsRepository(private val context: Context) {
 
     // ---------------------------------------------------------------- copy
 
-    suspend fun copy(src: FileNode, destDir: FileNode, onProgress: (OpProgress) -> Unit) =
+    suspend fun copy(src: FileNode, destDir: FileNode, onProgress: suspend (OpProgress) -> Unit) =
         withContext(Dispatchers.IO) {
             if (src.uri != null || destDir.uri != null) {
                 saf.copy(src, destDir, onProgress)
@@ -134,7 +134,7 @@ class FsRepository(private val context: Context) {
             copyRecursive(srcFile, File(destDir.path), sink, totalBytes)
         }
 
-    private fun copyRecursive(src: File, destDir: File, sink: ProgressSink, total: Long) {
+    private suspend fun copyRecursive(src: File, destDir: File, sink: ProgressSink, total: Long) {
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
         if (src.isDirectory && !Paths.isSymlink(src)) {
             val dest = uniqueFile(destDir, src.name).apply { mkdirs() }
@@ -146,7 +146,7 @@ class FsRepository(private val context: Context) {
         }
     }
 
-    private fun copyFile(src: File, dest: File, sink: ProgressSink, total: Long) {
+    private suspend fun copyFile(src: File, dest: File, sink: ProgressSink, total: Long) {
         val buffer = ByteArray(64 * 1024)
         var done = 0L
         FileInputStream(src).use { input ->
@@ -168,7 +168,7 @@ class FsRepository(private val context: Context) {
 
     // ----------------------------------------------------------------- move
 
-    suspend fun move(src: FileNode, destDir: FileNode, onProgress: (OpProgress) -> Unit) =
+    suspend fun move(src: FileNode, destDir: FileNode, onProgress: suspend (OpProgress) -> Unit) =
         withContext(Dispatchers.IO) {
             if (src.uri != null || destDir.uri != null) {
                 saf.move(src, destDir, onProgress)
@@ -191,7 +191,7 @@ class FsRepository(private val context: Context) {
         sources: List<FileNode>,
         destDir: FileNode,
         name: String,
-        onProgress: (OpProgress) -> Unit,
+        onProgress: suspend (OpProgress) -> Unit,
     ) = withContext(Dispatchers.IO) {
         require(sources.all { it.uri == null } && destDir.uri == null) {
             "La compresión a SAF aún no está soportada"
@@ -210,7 +210,7 @@ class FsRepository(private val context: Context) {
         sink.emit(totalBytes, totalBytes, sources.size, sources.size, dest.name)
     }
 
-    private fun addToZip(
+    private suspend fun addToZip(
         file: File,
         prefix: String,
         zip: ZipOutputStream,
@@ -272,7 +272,7 @@ class FsRepository(private val context: Context) {
         sumSizes(file)
     }
 
-    private fun sumSizes(file: File): Long {
+    private suspend fun sumSizes(file: File): Long {
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
         if (file.isFile) return file.length().coerceAtLeast(0L)
         if (!file.isDirectory || Paths.isSymlink(file)) return 0L
@@ -287,7 +287,7 @@ class FsRepository(private val context: Context) {
         countFileTree(File(node.path))
     }
 
-    private fun countFileTree(file: File): CountResult {
+    private suspend fun countFileTree(file: File): CountResult {
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
         if (file.isFile) return CountResult(1, 0)
         if (!file.isDirectory || Paths.isSymlink(file)) return CountResult(0, 0)
@@ -307,7 +307,7 @@ class FsRepository(private val context: Context) {
         return CountResult(files, dirs)
     }
 
-    private fun countFiles(file: File): Int = countFileTree(file).files
+    private suspend fun countFiles(file: File): Int = countFileTree(file).files
 
     // -------------------------------------------------------------- streams
 
@@ -369,10 +369,10 @@ class FsRepository(private val context: Context) {
 
     private class ProgressSink(
         private val type: OpType,
-        private val onProgress: (OpProgress) -> Unit,
+        private val onProgress: suspend (OpProgress) -> Unit,
     ) {
         private val tracker = SpeedTracker()
-        fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
+        suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             val speed = tracker.update(bytesDone)
             onProgress(OpProgress(type, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }

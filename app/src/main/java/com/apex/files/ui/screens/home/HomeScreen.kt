@@ -225,7 +225,6 @@ private fun ToolCard(
     }
 }
 
-@Composable
 private fun androidx.compose.foundation.lazy.grid.LazyGridScope.categoryItems(
     state: HomeViewModel.UiState,
     navigator: com.apex.files.Navigator,

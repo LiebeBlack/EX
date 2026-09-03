@@ -38,7 +38,7 @@ fun ApexTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
-            ApexIconButton(Icons.Outlined.ArrowBack, "Atrás", onBack)
+            ApexIconButton(Icons.Outlined.ArrowBack, "Atrás", onClick = onBack)
         }
         Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
             Text(

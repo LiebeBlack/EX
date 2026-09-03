@@ -75,7 +75,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         entry: ArchiveEntry,
         archiveNode: FileNode,
         destDir: FileNode,
-        onProgress: (OpProgress) -> Unit,
+        onProgress: suspend (OpProgress) -> Unit,
     ) = withContext(Dispatchers.IO) {
         require(destDir.uri == null) { "La extracción a SAF aún no está soportada" }
         val base = File(destDir.path)
@@ -124,8 +124,9 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
                 reader.use {
                     val prefix = entry.name.trimEnd('/')
                     var found = false
+                    val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
                     it.forEachEntry { tarEntry, stream ->
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        if (job?.isActive == false) throw kotlinx.coroutines.CancellationException("extracción cancelada")
                         val name = tarEntry.name.trimEnd('/')
                         if (name == prefix) {
                             found = true
@@ -153,7 +154,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         }
     }
 
-    private fun copyEntry(input: java.io.InputStream, dest: File, size: Long, sink: ProgressSink, name: String) {
+    private suspend fun copyEntry(input: java.io.InputStream, dest: File, size: Long, sink: ProgressSink, name: String) {
         dest.parentFile?.mkdirs()
         val buffer = ByteArray(64 * 1024)
         var done = 0L
@@ -233,9 +234,9 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         override fun close() {}
     }
 
-    private class ProgressSink(private val onProgress: (OpProgress) -> Unit) {
+    private class ProgressSink(private val onProgress: suspend (OpProgress) -> Unit) {
         private val tracker = SpeedTracker()
-        fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
+        suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             val speed = tracker.update(bytesDone)
             onProgress(OpProgress(OpType.EXTRACT, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }

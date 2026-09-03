@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +60,7 @@ fun GridTile(
                 ),
                 shape,
             )
-            .clickable(onClick = onClick, onLongClick = onLongClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp),
     ) {
         Box(

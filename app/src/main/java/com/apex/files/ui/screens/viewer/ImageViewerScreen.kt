@@ -93,7 +93,7 @@ fun ImageViewerScreen(node: FileNode) {
         ApexIconButton(
             Icons.Outlined.Close,
             "Cerrar",
-            { navigator.pop() },
+            onClick = { navigator.pop() },
             modifier = Modifier
                 .statusBarsPadding()
                 .padding(10.dp)
