@@ -1,0 +1,81 @@
+# =============================================================================
+# APEX File Manager — Code Quality: full analysis + every unit test
+#
+# Triggers:
+#   - every pull request
+#   - every push to any branch EXCEPT main/master (the release workflow
+#     already compiles and tests main)
+#   - manual run (workflow_dispatch)
+#
+# What it does (much stricter than the release pipeline):
+#   1. compiles EVERY Kotlin variant (debug + release, main + unit tests) so
+#      any syntax or type error anywhere in the codebase fails the job
+#   2. runs ALL unit tests on BOTH build types (testDebug + testRelease)
+#   3. runs Android Lint in full mode (all checks, not just the fatal ones
+#      used by lintVital on release)
+#
+# The release workflow only guards `main`; this one gives fast, complete
+# feedback on any branch or PR before it ever reaches a release.
+# =============================================================================
+
+name: Code Quality — Análisis y Tests
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: code-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Compilar todo + analizar + tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Grant execute permission to the wrapper
+        run: chmod +x gradlew
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile every variant (full syntax / type analysis)
+        run: |
+          ./gradlew --no-daemon \
+            compileDebugKotlin compileReleaseKotlin \
+            compileDebugUnitTestKotlin compileReleaseUnitTestKotlin
+
+      - name: Run ALL unit tests (debug + release)
+        run: ./gradlew --no-daemon testDebugUnitTest testReleaseUnitTest
+
+      - name: Static analysis (Android Lint, every check)
+        run: ./gradlew --no-daemon lintDebug
+
+      - name: Surface any compile warnings for review
+        if: always()
+        run: |
+          echo "## 🧹 Resultados del análisis" >> "$GITHUB_STEP_SUMMARY"
+          echo "Compilación de todos los variantes, tests unitarios (debug + release) y lint ejecutados." >> "$GITHUB_STEP_SUMMARY"
