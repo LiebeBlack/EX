@@ -81,15 +81,15 @@ class IndexStore(context: Context) {
             val tmp = File(file.parentFile, file.name + ".tmp")
             tmp.bufferedWriter(Charsets.UTF_8).use { w ->
                 w.write(HEADER)
-                w.write(LF)
+                w.write(LF.code)
                 for (n in nodes) {
                     if (n.isDir) continue
                     w.write(escape(n.path))
-                    w.write(TAB)
+                    w.write(TAB.code)
                     w.write(n.lastModified.toString())
-                    w.write(TAB)
+                    w.write(TAB.code)
                     w.write(n.size.toString())
-                    w.write(LF)
+                    w.write(LF.code)
                 }
             }
             if (!tmp.renameTo(file)) {
