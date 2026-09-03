@@ -14,6 +14,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -316,6 +317,28 @@ class FsRepository(private val context: Context) {
         else FileInputStream(File(node.path))
     } catch (e: Exception) {
         null
+    }
+
+    fun openOutputStream(node: FileNode): OutputStream? = try {
+        if (node.uri != null) resolver.openOutputStream(node.uri, "wt")
+        else FileOutputStream(File(node.path))
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Writes [content] back to [node] with the given charset. Returns false on failure. */
+    suspend fun saveText(
+        node: FileNode,
+        content: String,
+        charset: java.nio.charset.Charset,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val out = openOutputStream(node) ?: return@withContext false
+        try {
+            out.use { it.write(content.toByteArray(charset)) }
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /** Returns a real [File] for reading (copies SAF documents to cache). */

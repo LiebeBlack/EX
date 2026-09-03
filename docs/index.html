@@ -28,7 +28,7 @@
       perezosa, herramientas de limpieza 100&nbsp;% algorítmicas y visores integrados.
       Cero red. Cero servicios en segundo plano. Cien por cien local.</p>
     <ul class="facts" aria-label="Hechos clave">
-      <li>Kotlin&nbsp;2.0.21 + Jetpack&nbsp;Compose</li>
+      <li>Kotlin&nbsp;2.1.20 + Jetpack&nbsp;Compose</li>
       <li>minSdk&nbsp;26 · targetSdk&nbsp;35</li>
       <li>Sin permiso INTERNET</li>
       <li>Sin IA · sin Firebase · sin trackers</li>
@@ -75,16 +75,29 @@
     <p>Cabecera tipográfica, tarjeta de almacenamiento con lectura real de <code>StatFs</code>,
       herramientas rápidas y recuentos por categoría: Imágenes, Vídeos y Audio desde
       <code>MediaStore</code>; Documentos y Archivos desde el índice local.</p>
+    <p><strong>Favoritos y Recientes:</strong> las carpetas y archivos marcados con ★ desde las
+      propiedades se muestran para abrir con un toque, y cada archivo abierto se registra en un
+      historial local (máx. 20), persistido en los datos de la aplicación.</p>
 
     <h3>Explorador</h3>
     <ul class="plain">
       <li>Ruta de migas (<em>breadcrumb</em>) interactiva.</li>
-      <li>Vista lista ⇄ cuadrícula con <code>LazyColumn</code> / <code>LazyVerticalGrid</code>.</li>
+      <li>Vista lista ⇄ cuadrícula con <code>LazyColumn</code> / <code>LazyVerticalGrid</code>;
+        la elección de vista y el orden se <strong>recuerdan entre sesiones</strong>.</li>
       <li>Selección múltiple: copiar, mover, renombrar, eliminar, compartir, comprimir, propiedades.</li>
       <li>Centro de operaciones flotante con progreso, velocidad en MB/s, conteo y cancelación.</li>
-      <li>Propiedades: SHA-256 / MD5 bajo demanda, recuento recursivo, permisos y MIME.</li>
+      <li>Propiedades: SHA-256 / MD5 bajo demanda, recuento recursivo, permisos y MIME, y
+        marcado de favoritos.</li>
       <li>Acceso total (Android&nbsp;11+) y árboles <abbr title="Storage Access Framework">SAF</abbr>
         (USB-OTG, tarjetas SD).</li>
+    </ul>
+
+    <h3>Visores</h3>
+    <ul class="plain">
+      <li>Texto con detección de codificación, paginación por ventanas y
+        <strong>modo edición</strong> con guardado (archivos de hasta 2&nbsp;MB).</li>
+      <li>Imagen a pantalla completa con zoom por gestos (pellizco, rotación, doble toque).</li>
+      <li>PDF y comprimidos (ZIP/TAR) con visor integrado y extracción.</li>
     </ul>
 
     <h3>Motores locales</h3>

@@ -32,6 +32,11 @@ class TextViewerViewModel(
         val truncated: Boolean = false,
         val loading: Boolean = true,
         val error: String? = null,
+        val editable: Boolean = false,
+        val editing: Boolean = false,
+        val draft: String = "",
+        val saving: Boolean = false,
+        val notice: String? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -79,13 +84,66 @@ class TextViewerViewModel(
                     baseLine = 0,
                     totalLines = total,
                     encoding = encoding,
-                    truncated = total != null && lines.size < total,
+                    truncated = lines.size < total,
+                    editable = node.size in 1..MAX_EDIT_BYTES,
                     loading = false,
                 )
             }
         } catch (e: Exception) {
             _state.update { it.copy(error = e.message ?: "Error", loading = false) }
         }
+    }
+
+    // -------------------------------------------------------------- editor
+
+    /** Loads the whole file (bounded by [MAX_EDIT_BYTES]) into the draft. */
+    fun startEditing() {
+        val s = _state.value
+        if (!s.editable || s.editing || s.saving) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = try {
+                open().use { stream ->
+                    stream.readBytes().toString(charsetFor(s.encoding))
+                }
+            } catch (e: Exception) {
+                null
+            }
+            if (content == null) {
+                _state.update { it.copy(notice = "No se pudo abrir para editar") }
+            } else {
+                _state.update { it.copy(editing = true, draft = content) }
+            }
+        }
+    }
+
+    fun updateDraft(text: String) {
+        _state.update { it.copy(draft = text) }
+    }
+
+    fun cancelEditing() {
+        _state.update { it.copy(editing = false, draft = "") }
+    }
+
+    fun saveEditing() {
+        val s = _state.value
+        if (!s.editing || s.saving) return
+        _state.update { it.copy(saving = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = container.fs.saveText(node, s.draft, charsetFor(s.encoding))
+            _state.update {
+                it.copy(
+                    editing = false,
+                    draft = "",
+                    saving = false,
+                    notice = if (ok) "Guardado" else "No se pudo guardar",
+                )
+            }
+            if (ok) loadInitial()
+        }
+    }
+
+    fun consumeNotice() {
+        _state.update { it.copy(notice = null) }
     }
 
     private fun open(): InputStream =
@@ -192,5 +250,8 @@ class TextViewerViewModel(
 
     private companion object {
         const val WINDOW = 20_000
+
+        /** Files larger than this stay read-only in the viewer. */
+        const val MAX_EDIT_BYTES = 2L * 1024 * 1024
     }
 }

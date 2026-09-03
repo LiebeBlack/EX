@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.apex.files.BuildConfig
 import com.apex.files.Screen
 import com.apex.files.core.Accent
 import com.apex.files.ui.LocalNavigator
@@ -129,7 +130,11 @@ fun SettingsScreen() {
                 Column {
                     Text("Acerca de APEX", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
-                    Text("Versión 1.0", style = MonoTextStyleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Versión ${BuildConfig.VERSION_NAME}",
+                        style = MonoTextStyleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "Cero dependencias · Cero red · 100% local",

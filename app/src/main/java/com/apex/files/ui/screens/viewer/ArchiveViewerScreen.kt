@@ -20,7 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderZip
-import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -94,14 +94,18 @@ fun ArchiveViewerScreen(node: FileNode) {
             state.error != null -> EmptyState(Icons.Outlined.FolderZip, state.error ?: "Error")
             state.currentEntries.isEmpty() -> EmptyState(Icons.Outlined.FolderZip, "Carpeta vacía")
             else -> {
-                val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                val destDir = if (downloads.exists() || downloads.mkdirs()) {
-                    FileNode.forDirectory("Descargas", downloads.absolutePath)
-                } else {
-                    FileNode.forDirectory(
-                        "Almacenamiento interno",
-                        Environment.getExternalStorageDirectory().absolutePath,
-                    )
+                // Resolved once, outside composition: mkdirs() is a side
+                // effect and must not run on every recomposition.
+                val destDir = remember {
+                    val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    if (downloads.exists() || downloads.mkdirs()) {
+                        FileNode.forDirectory("Descargas", downloads.absolutePath)
+                    } else {
+                        FileNode.forDirectory(
+                            "Almacenamiento interno",
+                            Environment.getExternalStorageDirectory().absolutePath,
+                        )
+                    }
                 }
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -144,7 +148,7 @@ private fun ArchiveEntryRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            if (entry.isDir) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile,
+            if (entry.isDir) Icons.Outlined.Folder else Icons.AutoMirrored.Outlined.InsertDriveFile,
             null,
             tint = if (entry.isDir) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),

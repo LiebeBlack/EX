@@ -26,8 +26,8 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Sort
-import androidx.compose.material.icons.outlined.ViewList
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -137,7 +137,7 @@ fun ExplorerScreen(location: Location) {
                     navigator.push(Screen.Search())
                 }
                 Box {
-                    ApexIconButton(Icons.Outlined.Sort, "Ordenar") { sortMenuOpen = true }
+                    ApexIconButton(Icons.AutoMirrored.Outlined.Sort, "Ordenar") { sortMenuOpen = true }
                     DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
                         SortOrder.entries.forEach { order ->
                             DropdownMenuItem(
@@ -163,7 +163,7 @@ fun ExplorerScreen(location: Location) {
                     }
                 }
                 ApexIconButton(
-                    if (state.viewMode == com.apex.files.data.model.ViewMode.LIST) Icons.Outlined.GridView else Icons.Outlined.ViewList,
+                    if (state.viewMode == com.apex.files.data.model.ViewMode.LIST) Icons.Outlined.GridView else Icons.AutoMirrored.Outlined.ViewList,
                     "Cambiar vista",
                 ) { vm.toggleViewMode() }
                 ApexIconButton(Icons.Outlined.Add, "Nueva carpeta") { showNewFolderDialog = true }
@@ -275,6 +275,7 @@ fun ExplorerScreen(location: Location) {
             SelectionBar(
                 count = state.selection.size,
                 onCopy = { vm.startDestMode(ExplorerViewModel.DestMode.COPY) },
+                onSelectAll = { vm.selectAll() },
                 onMove = { vm.startDestMode(ExplorerViewModel.DestMode.MOVE) },
                 onRename = {
                     if (vm.selectedNodes().size == 1) showRenameDialog = true
@@ -337,8 +338,18 @@ fun ExplorerScreen(location: Location) {
         )
     }
     state.properties?.let { props ->
+        // Local mirror of the star state so the sheet updates instantly on
+        // toggle; remember is keyed per node because the sheet can switch files.
+        var favorite by remember(props.node.path) {
+            mutableStateOf(container.favorites.isFavorite(props.node.path))
+        }
         PropertiesSheet(
             state = props,
+            isFavorite = favorite,
+            onToggleFavorite = {
+                favorite = container.favorites.toggle(props.node)
+                toast(if (favorite) "Añadido a favoritos" else "Quitado de favoritos")
+            },
             onDismiss = { vm.dismissProperties() },
             onComputeHash = { vm.computeHash(it) },
             onCopyText = { text ->

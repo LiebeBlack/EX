@@ -30,6 +30,8 @@ class AppContainer(context: Context) {
     val fs: FsRepository by lazy { FsRepository(appContext) }
     val index: MemoryIndex by lazy { MemoryIndex() }
     val indexStore: IndexStore by lazy { IndexStore(appContext) }
+    val recents: RecentStore by lazy { RecentStore(appContext) }
+    val favorites: FavoritesStore by lazy { FavoritesStore(appContext) }
     val mediaStore: MediaStoreRepository by lazy { MediaStoreRepository(appContext) }
     val drives: DrivesRepository by lazy { DrivesRepository(appContext) }
 

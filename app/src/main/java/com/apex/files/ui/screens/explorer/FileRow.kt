@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -118,7 +118,7 @@ fun FileRow(
             )
         } else if (node.isDir) {
             Icon(
-                Icons.Outlined.KeyboardArrowRight,
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 null,
                 tint = ApexTextMuted,
                 modifier = Modifier.size(20.dp),

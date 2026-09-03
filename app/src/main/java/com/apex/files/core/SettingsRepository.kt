@@ -2,6 +2,8 @@ package com.apex.files.core
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.apex.files.data.model.SortOrder
+import com.apex.files.data.model.ViewMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +38,16 @@ class SettingsRepository(context: Context) {
     private val _showHidden = MutableStateFlow(prefs.getBoolean(KEY_SHOW_HIDDEN, false))
     val showHidden: StateFlow<Boolean> = _showHidden.asStateFlow()
 
+    private val _sortOrder = MutableStateFlow(
+        SortOrder.fromName(prefs.getString(KEY_SORT, null))
+    )
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    private val _viewMode = MutableStateFlow(
+        ViewMode.fromName(prefs.getString(KEY_VIEW_MODE, null))
+    )
+    val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
+
     fun setAccent(accent: Accent) {
         prefs.edit().putString(KEY_ACCENT, accent.name).apply()
         _accent.value = accent
@@ -46,8 +58,20 @@ class SettingsRepository(context: Context) {
         _showHidden.value = show
     }
 
+    fun setSortOrder(order: SortOrder) {
+        prefs.edit().putString(KEY_SORT, order.name).apply()
+        _sortOrder.value = order
+    }
+
+    fun setViewMode(mode: ViewMode) {
+        prefs.edit().putString(KEY_VIEW_MODE, mode.name).apply()
+        _viewMode.value = mode
+    }
+
     private companion object {
         const val KEY_ACCENT = "accent"
         const val KEY_SHOW_HIDDEN = "show_hidden"
+        const val KEY_SORT = "sort_order"
+        const val KEY_VIEW_MODE = "view_mode"
     }
 }

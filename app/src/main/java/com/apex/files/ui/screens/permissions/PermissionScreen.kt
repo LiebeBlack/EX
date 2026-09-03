@@ -53,7 +53,11 @@ fun PermissionScreen(
 
     val mediaLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { onGranted() }
+    ) { result ->
+        // Only advance when every requested permission was granted;
+        // otherwise the gate recomposes and the user can retry.
+        if (result.values.all { it }) onGranted()
+    }
 
     val treeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()

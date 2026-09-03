@@ -16,7 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Info
@@ -42,6 +43,7 @@ import com.apex.files.ui.theme.ApexShapes
 fun SelectionBar(
     count: Int,
     onCopy: () -> Unit,
+    onSelectAll: () -> Unit,
     onMove: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
@@ -76,8 +78,9 @@ fun SelectionBar(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
+                SelectionAction(Icons.Outlined.DoneAll, "Todo", onSelectAll)
                 SelectionAction(Icons.Outlined.ContentCopy, "Copiar", onCopy)
-                SelectionAction(Icons.Outlined.DriveFileMove, "Mover", onMove)
+                SelectionAction(Icons.AutoMirrored.Outlined.DriveFileMove, "Mover", onMove)
                 SelectionAction(Icons.Outlined.Edit, "Renombrar", onRename)
                 SelectionAction(Icons.Outlined.FolderZip, "Comprimir", onCompress)
                 SelectionAction(Icons.Outlined.Share, "Compartir", onShare)

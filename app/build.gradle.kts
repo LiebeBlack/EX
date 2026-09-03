@@ -25,7 +25,9 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        // The release workflow exports VERSION_TAG (v1.0.<run_number>); strip
+        // the leading "v" so installed builds show the real release version.
+        versionName = (System.getenv("VERSION_TAG") ?: "v1.0").removePrefix("v")
 
         // Native ABI support: arm64-v8a (current devices), armeabi-v7a
         // (legacy 32-bit), x86_64 (emulators / x64 devices). The app is
@@ -98,6 +100,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     lint {

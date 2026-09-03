@@ -1,5 +1,6 @@
 package com.apex.files.ui.screens.home
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,27 +41,48 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
+import com.apex.files.data.model.FileNode
+import com.apex.files.data.model.Location
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
+import com.apex.files.ui.NodeOpener
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
 import com.apex.files.ui.components.ApexIconButton
+import com.apex.files.ui.components.FileIcon
 import com.apex.files.ui.components.StorageBar
-import com.apex.files.ui.theme.MonoTextStyleSmall
 import com.apex.files.ui.theme.ApexTextMuted
+import com.apex.files.ui.theme.MonoTextStyleSmall
+import java.io.File
 
 @Composable
 fun HomeScreen() {
     val container = LocalContainer.current
     val navigator = LocalNavigator.current
+    val context = LocalContext.current
     val vm: HomeViewModel = apexViewModel(key = "home") { container -> HomeViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val favorites by container.favorites.items.collectAsStateWithLifecycle()
+    val recents by container.recents.items.collectAsStateWithLifecycle()
+
+    fun openFavorite(node: FileNode) {
+        if (node.isDir) {
+            val location = node.uri?.let { Location.Saf(it, node.name) }
+                ?: Location.Fs(File(node.path))
+            navigator.push(Screen.Explorer(location))
+        } else {
+            NodeOpener.open(node, container, navigator, context) { msg ->
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
@@ -134,8 +158,8 @@ fun HomeScreen() {
         }
         item {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth().height(192.dp),
+                columns = GridCells.Adaptive(minSize = 160.dp),
+                modifier = Modifier.fillMaxWidth().height(240.dp),
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -152,14 +176,50 @@ fun HomeScreen() {
         item { SectionLabel("Categorías") }
         item {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxWidth().height(168.dp),
+                columns = GridCells.Adaptive(minSize = 96.dp),
+                modifier = Modifier.fillMaxWidth().height(192.dp),
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 userScrollEnabled = false,
             ) {
                 categoryItems(state, navigator)
+            }
+        }
+
+        // ---- Favorites ----
+        if (favorites.isNotEmpty()) {
+            item { SectionLabel("Favoritos") }
+            item {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    favorites.forEach { favorite ->
+                        FavoriteCard(
+                            node = favorite.node,
+                            onClick = { openFavorite(favorite.node) },
+                            onRemove = { container.favorites.remove(favorite.node.path) },
+                        )
+                    }
+                }
+            }
+        }
+
+        // ---- Recents ----
+        if (recents.isNotEmpty()) {
+            item { SectionLabel("Recientes") }
+            item {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    recents.forEach { entry ->
+                        RecentRow(entry.node) {
+                            openFavorite(entry.node)
+                        }
+                    }
+                }
             }
         }
 
@@ -222,6 +282,64 @@ private fun ToolCard(
         Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(2.dp))
         Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+    }
+}
+
+@Composable
+private fun FavoriteCard(
+    node: FileNode,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (node.isDir) {
+                Icon(Icons.Outlined.Star, null, tint = MaterialTheme.colorScheme.primary)
+            } else {
+                FileIcon(node.category, false, Modifier.size(22.dp), size = 20.dp)
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(node.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (node.isDir) "Carpeta" else SizeFormatter.format(node.size),
+                    style = MonoTextStyleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            ApexIconButton(
+                Icons.Outlined.Close,
+                "Quitar de favoritos",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = onRemove,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecentRow(node: FileNode, onClick: () -> Unit) {
+    ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FileIcon(node.category, node.isDir, Modifier.size(28.dp), size = 18.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    node.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "${node.path.substringBeforeLast('/').ifBlank { "/" }} · ${SizeFormatter.format(node.size)}",
+                    style = MonoTextStyleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 

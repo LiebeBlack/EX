@@ -50,7 +50,13 @@ fun GridTile(
     modifier: Modifier = Modifier,
 ) {
     val shape = ApexShapes.medium
-    val container = if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant
+    // Selected tiles get a primary-tinted fill (surfaceVariant is the base
+    // fill for every tile, so it cannot double as the selected state).
+    val container = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
     Column(
         modifier
             .clip(shape)

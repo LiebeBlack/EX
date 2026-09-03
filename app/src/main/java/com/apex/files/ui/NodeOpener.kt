@@ -32,6 +32,8 @@ object NodeOpener {
         context: Context,
         onUnavailable: (String) -> Unit = {},
     ) {
+        // Every open lands in the Home "Recientes" list (files only).
+        if (!node.isDir) container.recents.record(node)
         when {
             node.category == Category.IMAGE -> navigator.push(Screen.ImageViewer(node))
             FileKinds.isText(node) -> navigator.push(Screen.TextViewer(node))

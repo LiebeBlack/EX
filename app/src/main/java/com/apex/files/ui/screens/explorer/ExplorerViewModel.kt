@@ -58,7 +58,13 @@ class ExplorerViewModel(
         val showHidden: Boolean = false,
     )
 
-    private val _state = MutableStateFlow(UiState(showHidden = container.settings.showHidden.value))
+    private val _state = MutableStateFlow(
+        UiState(
+            showHidden = container.settings.showHidden.value,
+            viewMode = container.settings.viewMode.value,
+            sort = container.settings.sortOrder.value,
+        )
+    )
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init {
@@ -133,12 +139,13 @@ class ExplorerViewModel(
     }
 
     fun toggleViewMode() {
-        _state.update {
-            it.copy(viewMode = if (it.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST)
-        }
+        val next = if (_state.value.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
+        container.settings.setViewMode(next)
+        _state.update { it.copy(viewMode = next) }
     }
 
     fun setSort(sort: SortOrder) {
+        container.settings.setSortOrder(sort)
         _state.update { it.copy(sort = sort) }
         refresh()
     }

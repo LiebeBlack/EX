@@ -1,6 +1,8 @@
 package com.apex.files.ui.screens.explorer
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +19,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,6 +49,8 @@ import com.apex.files.ui.theme.MonoTextStyleSmall
 @Composable
 fun PropertiesSheet(
     state: ExplorerViewModel.PropertiesState,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
     onComputeHash: (HashAlgorithm) -> Unit,
     onCopyText: (String) -> Unit,
@@ -90,6 +96,39 @@ fun PropertiesSheet(
                 PermissionBadge("Escritura", state.canWrite)
                 Spacer(Modifier.width(6.dp))
                 PermissionBadge("Ejecución", state.canExecute)
+            }
+
+            HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(ApexShapes.small)
+                    .background(ApexContainer)
+                    .clickable(onClick = onToggleFavorite)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarBorder,
+                    "Favorito",
+                    tint = if (isFavorite) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (isFavorite) "Quitar de Favoritos" else "Añadir a Favoritos",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isFavorite) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
             }
 
             HorizontalDivider(color = ApexBorder, thickness = 1.dp)
