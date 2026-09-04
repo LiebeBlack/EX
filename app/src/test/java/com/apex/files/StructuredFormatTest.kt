@@ -36,8 +36,10 @@ class StructuredFormatTest {
         assertTrue(p.startsWith("{\n"))
         assertTrue(p.endsWith("\n}"))
         assertTrue(p.contains("\n  \"b\": 2,\n"))
-        assertTrue(p.contains("\n    \"c\": [\n      1,\n"))
-        assertTrue(p.contains("\n        \"d\": true\n"))
+        // "c" is an object key at depth 2 (6 spaces); array elements at
+        // depth 3 (8 spaces); "d" a key at depth 4 (10 spaces).
+        assertTrue(p.contains("\n      \"c\": [\n        1,\n"))
+        assertTrue(p.contains("\n          \"d\": true\n"))
     }
 
     @Test
