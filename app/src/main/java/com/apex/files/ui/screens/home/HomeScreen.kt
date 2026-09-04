@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -190,6 +192,14 @@ fun HomeScreen() {
                     onClick = { navigator.push(Screen.Logcat) },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                // Full-width row: Papelera (soft delete / restore).
+                ToolCard(
+                    icon = Icons.Outlined.DeleteSweep,
+                    title = "Papelera",
+                    subtitle = "Recupera elementos eliminados",
+                    onClick = { navigator.push(Screen.Trash) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
@@ -291,7 +301,17 @@ fun HomeScreen() {
 
         // ---- Recents ----
         if (recents.isNotEmpty()) {
-            item { SectionLabel("Recientes") }
+            item {
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionLabel("Recientes", modifier = Modifier.weight(1f))
+                    TextButton(onClick = { container.recents.clear() }) {
+                        Text("Limpiar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             item {
                 Column(
                     Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -357,7 +377,7 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text.uppercase(),
         style = MaterialTheme.typography.labelSmall.copy(
@@ -365,7 +385,7 @@ private fun SectionLabel(text: String) {
             letterSpacing = 1.2.sp,
         ),
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 20.dp, top = 22.dp, bottom = 10.dp),
+        modifier = modifier.padding(start = 20.dp, top = 22.dp, bottom = 10.dp),
     )
 }
 

@@ -48,6 +48,8 @@ class TextViewerViewModel(
         val matches: List<Int> = emptyList(),
         val matchIndex: Int = -1,
         val matchesTruncated: Boolean = false,
+        /** Soft-wrap each line instead of horizontal truncation. */
+        val wrap: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -177,6 +179,10 @@ class TextViewerViewModel(
     fun closeSearch() {
         searchJob?.cancel()
         _state.update { it.copy(searchQuery = "", searching = false, matches = emptyList(), matchIndex = -1, matchesTruncated = false) }
+    }
+
+    fun toggleWrap() {
+        _state.update { it.copy(wrap = !it.wrap) }
     }
 
     private suspend fun loadInitial() {

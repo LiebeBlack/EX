@@ -22,6 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Speed
@@ -50,6 +53,7 @@ import com.apex.files.BuildConfig
 import com.apex.files.Screen
 import com.apex.files.core.Accent
 import com.apex.files.data.model.SortDirection
+import com.apex.files.data.model.ViewMode
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
@@ -68,6 +72,8 @@ fun SettingsScreen() {
     val customAccent by vm.customAccent.collectAsStateWithLifecycle()
     val showHidden by vm.showHidden.collectAsStateWithLifecycle()
     val sortDirection by vm.sortDirection.collectAsStateWithLifecycle()
+    val trashEnabled by vm.trashEnabled.collectAsStateWithLifecycle()
+    val viewMode by vm.viewMode.collectAsStateWithLifecycle()
     var showCustomDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -122,6 +128,77 @@ fun SettingsScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DirectionChip("Ascendente", sortDirection == SortDirection.ASC) { vm.setSortDirection(SortDirection.ASC) }
                     DirectionChip("Descendente", sortDirection == SortDirection.DESC) { vm.setSortDirection(SortDirection.DESC) }
+                }
+            }
+
+            // Default Explorer view (List / Grid)
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (viewMode == ViewMode.LIST) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Vista por defecto", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Lista o cuadrícula al abrir una carpeta",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DirectionChip("Lista", viewMode == ViewMode.LIST) { vm.setViewMode(ViewMode.LIST) }
+                    DirectionChip("Cuadrícula", viewMode == ViewMode.GRID) { vm.setViewMode(ViewMode.GRID) }
+                }
+            }
+
+            // Papelera (soft delete)
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.DeleteSweep, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Papelera", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (trashEnabled) {
+                                "Los borrados se pueden restaurar; guarda una copia por volumen en .apex_trash"
+                            } else {
+                                "Desactivada: los archivos se eliminan de forma permanente"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = trashEnabled,
+                        onCheckedChange = vm::setTrashEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = ApexBorder,
+                            uncheckedBorderColor = ApexBorder,
+                        ),
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { navigator.push(Screen.Trash) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Abrir papelera",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
 

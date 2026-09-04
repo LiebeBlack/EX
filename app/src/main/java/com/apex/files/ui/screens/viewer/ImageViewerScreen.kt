@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.apex.files.data.model.FileNode
+import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.theme.MonoTextStyleSmall
@@ -50,6 +53,8 @@ import java.io.File
 fun ImageViewerScreen(nodes: List<FileNode>, startIndex: Int) {
     if (nodes.isEmpty()) return
     val navigator = LocalNavigator.current
+    val container = LocalContainer.current
+    var showInfo by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
         initialPage = startIndex.coerceIn(0, nodes.lastIndex),
@@ -138,15 +143,27 @@ fun ImageViewerScreen(nodes: List<FileNode>, startIndex: Int) {
             )
         }
 
-        ApexIconButton(
-            Icons.Outlined.Close,
-            "Cerrar",
-            onClick = { navigator.pop() },
-            modifier = Modifier
+        Row(
+            Modifier
                 .statusBarsPadding()
                 .padding(10.dp)
-                .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-        )
+                .align(Alignment.TopEnd),
+        ) {
+            ApexIconButton(
+                Icons.Outlined.Info,
+                "Información y EXIF",
+                onClick = { showInfo = true },
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+            )
+            ApexIconButton(
+                Icons.Outlined.Close,
+                "Cerrar",
+                onClick = { navigator.pop() },
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+            )
+        }
 
         if (nodes.size > 1) {
             Text(
@@ -170,6 +187,14 @@ fun ImageViewerScreen(nodes: List<FileNode>, startIndex: Int) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(start = 40.dp, end = 40.dp, bottom = 18.dp),
+        )
+    }
+
+    if (showInfo) {
+        ImageInfoSheet(
+            node = nodes[page],
+            container = container,
+            onDismiss = { showInfo = false },
         )
     }
 }

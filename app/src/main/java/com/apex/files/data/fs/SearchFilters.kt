@@ -31,6 +31,16 @@ object SearchFilters {
         }
     }
 
+    /**
+     * Case-insensitive substring match used by the Explorer's in-folder
+     * live filter. Blank queries match everything.
+     */
+    fun matchesName(name: String, query: String): Boolean {
+        val q = query.trim()
+        if (q.isEmpty()) return true
+        return name.contains(q, ignoreCase = true)
+    }
+
     /** Matches a wildcard like "*.apk" or "*.pdf" (case-insensitive, single *). */
     fun matchesExtension(name: String, wildcard: String): Boolean {
         val w = wildcard.trim().lowercase()

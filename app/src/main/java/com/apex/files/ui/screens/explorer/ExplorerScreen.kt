@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,14 +23,23 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
@@ -50,17 +60,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.core.OpType
 import com.apex.files.data.fs.FileKinds
+import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.data.model.SortDirection
@@ -80,6 +93,8 @@ import com.apex.files.ui.components.NeonProgressBar
 import com.apex.files.ui.components.SelectionBar
 import com.apex.files.ui.theme.ApexBorder
 import com.apex.files.ui.theme.ApexContainer
+import com.apex.files.ui.theme.ApexContainerHigh
+import com.apex.files.ui.theme.MonoTextStyleSmall
 
 @Composable
 fun ExplorerScreen(location: Location) {
@@ -97,8 +112,12 @@ fun ExplorerScreen(location: Location) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
+    var showNewFileDialog by remember { mutableStateOf(false) }
     var showCompressDialog by remember { mutableStateOf(false) }
     var sortMenuOpen by remember { mutableStateOf(false) }
+    var showFilter by remember { mutableStateOf(false) }
+    var addMenuOpen by remember { mutableStateOf(false) }
+    val trashEnabled by container.settings.trashEnabled.collectAsStateWithLifecycle()
 
     val toast: (String) -> Unit = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
 
@@ -149,6 +168,21 @@ fun ExplorerScreen(location: Location) {
         runCatching { context.startActivity(Intent.createChooser(intent, "Compartir")) }
             .onFailure { toast("No se pudo compartir") }
     }
+
+    fun copyPaths() {
+        val paths = vm.selectedNodes().map { it.path }.joinToString("\n")
+        if (paths.isEmpty()) return
+        clipboard.setText(AnnotatedString(paths))
+        toast("Ruta(s) copiadas al portapapeles")
+    }
+
+    fun extractHere() {
+        launchOperation(OpType.EXTRACT, vm.extractHereFlow())
+    }
+
+    // Single archive selected → the selection bar shows “Extraer aquí”.
+    val selected = state.entries.filter { it.path in state.selection }
+    val canExtract = selected.size == 1 && !selected[0].isDir && container.archive.isSupported(selected[0])
 
     fun launchOperation(type: OpType, flow: kotlinx.coroutines.flow.Flow<com.apex.files.core.OpProgress>) {
         center.launch(type, flow) { ok ->
@@ -224,9 +258,51 @@ fun ExplorerScreen(location: Location) {
                     if (state.showHidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                     if (state.showHidden) "Ocultar archivos ocultos" else "Mostrar archivos ocultos",
                 ) { vm.setShowHidden(!state.showHidden) }
-                ApexIconButton(Icons.Outlined.Add, "Nueva carpeta") { showNewFolderDialog = true }
+                ApexIconButton(
+                    Icons.Outlined.FilterList,
+                    if (showFilter) "Ocultar filtro" else "Filtrar",
+                    tint = if (showFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                ) {
+                    showFilter = !showFilter
+                    if (!showFilter) vm.setFilterQuery("")
+                }
+                Box {
+                    ApexIconButton(Icons.Outlined.Add, "Nuevo") { addMenuOpen = true }
+                    DropdownMenu(expanded = addMenuOpen, onDismissRequest = { addMenuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Nueva carpeta", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                addMenuOpen = false
+                                showNewFolderDialog = true
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Nuevo archivo de texto", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                addMenuOpen = false
+                                showNewFileDialog = true
+                            },
+                        )
+                    }
+                }
             },
         )
+
+        if (showFilter) {
+            FilterBar(
+                query = state.filterQuery,
+                onQueryChange = vm::setFilterQuery,
+                onClose = {
+                    showFilter = false
+                    vm.setFilterQuery("")
+                },
+                matchLabel = if (state.filterQuery.isNotBlank()) {
+                    "${state.visibleEntries.size}/${state.entries.size}"
+                } else {
+                    ""
+                },
+            )
+        }
 
         Breadcrumbs(state.ancestors, state.current ?: FileNode.forDirectory("…", "…", isRoot = true), vm::navigateTo)
 
@@ -290,13 +366,14 @@ fun ExplorerScreen(location: Location) {
                     onRefresh = { vm.refresh() },
                     modifier = Modifier.fillMaxSize(),
                 ) {
+                    val visible = state.visibleEntries
                     if (state.viewMode == ViewMode.LIST) {
                         LazyColumn(
                             Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            items(state.entries, key = { it.path }) { node ->
+                            items(visible, key = { it.path }) { node ->
                                 FileRow(
                                     node = node,
                                     selected = node.path in state.selection,
@@ -323,7 +400,7 @@ fun ExplorerScreen(location: Location) {
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(state.entries, key = { it.path }) { node ->
+                            items(visible, key = { it.path }) { node ->
                                 GridTile(
                                     node = node,
                                     selected = node.path in state.selection,
@@ -347,6 +424,40 @@ fun ExplorerScreen(location: Location) {
             }
         }
 
+        // Folder summary bar (hidden while selecting / pasting).
+        if (!state.selectionMode && state.destMode == null && state.entries.isNotEmpty()) {
+            val folders = state.entries.count { it.isDir }
+            val files = state.entries.size - folders
+            val bytes = state.entries.filterNot { it.isDir }.sumOf { it.size }
+            Surface(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 4.dp),
+                shape = MaterialTheme.shapes.small,
+                color = ApexContainer,
+                border = BorderStroke(1.dp, ApexBorder),
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "$folders carpeta(s) · $files archivo(s) · ${SizeFormatter.format(bytes)}",
+                        style = MonoTextStyleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                    )
+                    if (state.filterQuery.isNotBlank()) {
+                        Text(
+                            "${state.filteredOut} ocultos por filtro",
+                            style = MonoTextStyleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
+
         if (state.selectionMode && state.destMode == null) {
             SelectionBar(
                 count = state.selection.size,
@@ -354,13 +465,16 @@ fun ExplorerScreen(location: Location) {
                 onSelectAll = { vm.selectAll() },
                 onMove = { vm.startDestMode(ExplorerViewModel.DestMode.MOVE) },
                 onRename = {
-                    if (vm.selectedNodes().size == 1) showRenameDialog = true
-                    else toast("Selecciona un solo elemento para renombrar")
+                    val sel = vm.selectedNodes()
+                    if (sel.size == 1) showRenameDialog = true
+                    else if (sel.size > 1) navigator.push(Screen.BatchRename(sel))
                 },
                 onDelete = { showDeleteConfirm = true },
                 onShare = { shareSelected() },
                 onCompress = { showCompressDialog = true },
                 onProperties = { vm.selectedNodes().firstOrNull()?.let(vm::showProperties) },
+                onCopyPaths = { copyPaths() },
+                onExtract = if (canExtract) ({ extractHere() }) else null,
                 onClear = { vm.clearSelection() },
             )
         }
@@ -368,10 +482,21 @@ fun ExplorerScreen(location: Location) {
 
     // ---- Dialogs ----
     if (showDeleteConfirm) {
+        val hasSaf = vm.selectedNodes().any { it.uri != null }
         ConfirmDialog(
             title = "¿Eliminar?",
-            message = "Se eliminará ${state.selection.size} elemento(s) de forma permanente. Esta acción no se puede deshacer.",
-            confirmLabel = "Eliminar",
+            message = if (trashEnabled) {
+                val trashable = vm.selectedNodes().count { it.uri == null }
+                if (hasSaf && trashable > 0) {
+                    "$trashable elemento(s) irá(n) a la Papelera (se pueden restaurar). " +
+                        "Los elementos SAF se eliminarán de forma permanente."
+                } else {
+                    "${state.selection.size} elemento(s) se moverá(n) a la Papelera. Se pueden restaurar desde Inicio → Papelera."
+                }
+            } else {
+                "Se eliminará ${state.selection.size} elemento(s) de forma permanente. Esta acción no se puede deshacer."
+            },
+            confirmLabel = if (trashEnabled) "Mover a papelera" else "Eliminar",
             onConfirm = {
                 showDeleteConfirm = false
                 launchOperation(OpType.DELETE, vm.deleteFlow())
@@ -400,6 +525,17 @@ fun ExplorerScreen(location: Location) {
                 vm.createFolder(name)
             },
             onDismiss = { showNewFolderDialog = false },
+        )
+    }
+    if (showNewFileDialog) {
+        InputDialog(
+            title = "Nuevo archivo de texto",
+            initialValue = "nuevo.txt",
+            onConfirm = { name ->
+                showNewFileDialog = false
+                vm.createFile(name)
+            },
+            onDismiss = { showNewFileDialog = false },
         )
     }
     if (showCompressDialog) {
@@ -433,6 +569,7 @@ fun ExplorerScreen(location: Location) {
                 toast("Copiado")
             },
             onOpenWith = { if (!props.node.isDir) openWithChooser(props.node) },
+            onHexView = { if (!props.node.isDir) navigator.push(Screen.HexViewer(props.node)) },
         )
     }
 }
@@ -461,4 +598,59 @@ private fun RefreshableEmpty(icon: ImageVector, message: String) {
     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         EmptyState(icon, message)
     }
+}
+
+/** Instant in-folder filter bar (client-side, matches names case-insensitively). */
+@Composable
+private fun FilterBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    matchLabel: String,
+    onClose: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            singleLine = true,
+            textStyle = MonoTextStyleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { /* filtering is live */ }),
+            modifier = Modifier
+                .weight(1f)
+                .background(ApexContainerHigh, RoundedCornerShape(8.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            decorationBox = { inner ->
+                if (query.isEmpty()) {
+                    Text(
+                        "Filtrar por nombre…",
+                        style = MonoTextStyleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                inner()
+            },
+        )
+        if (matchLabel.isNotBlank()) {
+            Text(
+                matchLabel,
+                style = MonoTextStyleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        ApexIconButton(
+            Icons.Outlined.Close,
+            "Cerrar filtro",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            onClick = onClose,
+        )
+    }
+    HorizontalDivider(color = ApexBorder, thickness = 1.dp)
 }

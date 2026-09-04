@@ -81,7 +81,31 @@ APEX es un explorador de archivos tipo **CX File Explorer** con estética **Ultr
 - **Icono del lanzador** extraído (PNG/WebP, mejor densidad) y **XML decodificado** navegable en pantalla.
 - **Consola de sistema (logcat)**: filtros por nivel y texto, lectura `logcat -d` (requiere READ_LOGS: builds de depuración o ADB).
 
+### 🗑️ Papelera (soft delete)
+- **Borrado recuperable**: eliminar mueve los archivos a una papelera por volumen (`/.apex_trash`) en vez de destruirlos.
+- **Restaurar** a la ubicación original (recrea carpetas intermedias; conflictos se resuelven conservando ambos), **eliminar definitivamente** una entrada o **vaciar la papelera** entera.
+- Los nodos SAF (USB-OTG) no se pueden mover a la papelera → se borran de forma permanente, siempre avisado en el diálogo.
+- Interruptor en **Ajustes** (Papelera on/off) + acceso directo desde Inicio y desde Ajustes.
+- Metadatos por elemento en un archivo diminuto junto a cada entrada (sin bases de datos ni dependencias).
+
+### ✏️ Renombrado por lotes
+- **Buscar y reemplazar** en el nombre, **prefijo/sufijo**, y **renumeración automática** (`archivo_01.txt`) con contador y cifras configurables.
+- **Vista previa en vivo** de cada cambio, detección de colisiones y caracteres no válidos antes de tocar el disco.
+- Se activa seleccionando varios elementos → **Renombrar**.
+
+### 🖥️ Más visores y metadatos
+- **Metadatos EXIF** en el visor de imágenes: fabricante, modelo, orientación, exposición, apertura, ISO, distancia focal, flash, GPS y dimensiones — **parser propio de cero dependencias** sobre el segmento APP1/JPEG.
+- **Visor hexadecimal** para cualquier archivo (desde Propiedades): offset · hex · ASCII, memoria acotada por ventanas y «Cargar más».
+- **Visor de texto**: números de línea y **ajuste de línea** (soft wrap) activable.
+
 ### 🗺️ Y además
+- **Filtro instantáneo** dentro de una carpeta (coincidencia por nombre, en vivo, sin re-escaneos).
+- **Barra de resumen** del contenido actual: `N carpetas · M archivos · tamaño total`.
+- **Nuevo archivo de texto** y **nueva carpeta** desde el botón `+` del explorador.
+- **Extraer aquí** directamente desde la selección (sin abrir el visor de archivos).
+- **Copiar rutas** de la selección al portapapeles (una por línea).
+- **Recientes** con botón «Limpiar» en Inicio.
+- **Ajuste por defecto de la vista** (Lista / Cuadrícula) en Ajustes.
 - **Analizador de espacio** tipo *treemap squarified* dibujado en `Canvas` (toca para entrar).
 - **Sugerencias inteligentes** en Inicio: los archivos más grandes del índice con apertura directa, y carpetas recientes navegables.
 - **Ajustes**: archivos ocultos, orden por defecto, acento neón (presets o **paleta personalizada de 12 colores**) y **benchmark** de almacenamiento real.

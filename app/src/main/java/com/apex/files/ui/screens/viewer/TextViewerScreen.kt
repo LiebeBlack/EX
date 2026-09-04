@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.WrapText
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,6 +95,17 @@ fun TextViewerScreen(node: FileNode) {
                 else -> state.encoding
             },
             actions = {
+                if (!state.editing && state.totalLines != null) {
+                    ApexIconButton(
+                        Icons.Outlined.WrapText,
+                        if (state.wrap) "Desactivar ajuste de línea" else "Ajustar línea",
+                        tint = if (state.wrap) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onBackground
+                        },
+                    ) { vm.toggleWrap() }
+                }
                 if (state.editing) {
                     TextButton(onClick = { vm.saveEditing() }, enabled = !state.saving) {
                         Text(
@@ -189,22 +202,32 @@ fun TextViewerScreen(node: FileNode) {
                     val to = from + state.lines.size
                     state.matches.filter { it in from until to }.toSet()
                 }
-                LazyColumn(
-                    Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                ) {
-                    itemsIndexed(state.lines) { index, line ->
-                        val absolute = state.baseLine + index
-                        Text(
-                            line.ifEmpty { " " },
-                            style = lineStyle,
-                            color = if (absolute in highlighted) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.92f)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                if (state.wrap) {
+                    WrappedLines(
+                        lines = state.lines,
+                        baseLine = state.baseLine,
+                        highlighted = highlighted,
+                        lineStyle = lineStyle,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                    )
+                } else {
+                    LazyColumn(
+                        Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        itemsIndexed(state.lines) { index, line ->
+                            val absolute = state.baseLine + index
+                            LineRow(
+                                number = absolute + 1,
+                                content = line.ifEmpty { " " },
+                                lineStyle = lineStyle,
+                                color = if (absolute in highlighted) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.92f)
+                                },
+                            )
+                        }
                     }
                 }
                 Row(
@@ -318,4 +341,54 @@ private fun SearchBarRow(
     }
     Spacer(Modifier.height(2.dp))
     androidx.compose.material3.HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+}
+
+/** Gutter number (right-aligned, muted) + the line content. */
+@Composable
+private fun LineRow(
+    number: Int,
+    content: String,
+    lineStyle: TextStyle,
+    color: androidx.compose.ui.graphics.Color,
+) {
+    Row(Modifier.fillMaxWidth()) {
+        Text(
+            number.toString(),
+            style = MonoTextStyleSmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.width(52.dp).padding(end = 10.dp),
+        )
+        Text(
+            content,
+            style = lineStyle,
+            color = color,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** Wrap mode: one scroll container holding number + soft-wrapped content rows. */
+@Composable
+private fun WrappedLines(
+    lines: List<String>,
+    baseLine: Int,
+    highlighted: Set<Int>,
+    lineStyle: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
+        lines.forEachIndexed { index, line ->
+            val absolute = baseLine + index
+            LineRow(
+                number = absolute + 1,
+                content = line.ifEmpty { " " },
+                lineStyle = lineStyle.copy(softWrap = true),
+                color = if (absolute in highlighted) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.92f)
+                },
+            )
+        }
+    }
 }

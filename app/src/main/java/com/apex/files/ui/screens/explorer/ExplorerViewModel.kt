@@ -65,9 +65,18 @@ class ExplorerViewModel(
         val pendingSources: List<FileNode> = emptyList(),
         val properties: PropertiesState? = null,
         val showHidden: Boolean = false,
+        /** In-folder live filter (client-side, instant). */
+        val filterQuery: String = "",
         /** One-shot toast messages (rename/folder/create failures). */
         val notice: String? = null,
-    )
+    ) {
+        /** Entries after applying the live name filter. */
+        val visibleEntries: List<FileNode>
+            get() = if (filterQuery.isBlank()) entries
+            else entries.filter { com.apex.files.data.fs.SearchFilters.matchesName(it.name, filterQuery) }
+
+        val filteredOut: Int get() = entries.size - visibleEntries.size
+    }
 
     private val _state = MutableStateFlow(
         UiState(
@@ -306,11 +315,25 @@ class ExplorerViewModel(
     fun deleteFlow(): Flow<OpProgress> = flow {
         val sources = selectedNodes()
         clearSummary()
+        val trashEnabled = container.settings.trashEnabled.value
+        val (toTrash, toDelete) = sources.partition { trashEnabled && it.uri == null }
         var acc = OpResult()
-        for (n in sources) {
+        for (n in toDelete) {
             acc += container.fs.delete(n) { emit(it) }
         }
-        _opSummary.value = summarize(OpType.DELETE, acc)
+        for (n in toTrash) {
+            acc += container.trash.trash(n)
+        }
+        _opSummary.value = when {
+            toTrash.isNotEmpty() && toDelete.isEmpty() -> {
+                val suffix = if (acc.errors > 0) " · ${acc.errors} errores" else ""
+                "Enviados a la papelera: ${toTrash.size}$suffix"
+            }
+            toTrash.isNotEmpty() -> {
+                "Enviados a la papelera: ${toTrash.size} · ${summarize(OpType.DELETE, acc)}"
+            }
+            else -> summarize(OpType.DELETE, acc)
+        }
     }
 
     fun compressFlow(name: String): Flow<OpProgress> = flow {
@@ -401,6 +424,40 @@ class ExplorerViewModel(
                 refresh()
             }
         }
+    }
+
+    fun createFile(name: String) {
+        val cur = _state.value.current ?: return
+        viewModelScope.launch {
+            val created = container.fs.createFile(cur, name)
+            if (created == null) {
+                _state.update { it.copy(notice = "No se pudo crear el archivo: el nombre ya existe o no es válido") }
+            } else {
+                refresh()
+            }
+        }
+    }
+
+    // -------------------------------------------------------- live filter
+
+    fun setFilterQuery(query: String) {
+        _state.update { it.copy(filterQuery = query) }
+    }
+
+    // ------------------------------------------------------- extract here
+
+    /** Extracts the selected archive into the current folder. */
+    fun extractHereFlow(): Flow<OpProgress> = flow {
+        val dest = _state.value.current ?: return@flow
+        val source = selectedNodes().firstOrNull() ?: return@flow
+        clearSummary()
+        val acc = container.archive.extractAll(
+            source,
+            dest,
+            onProgress = { emit(it) },
+            onConflict = container.conflicts::resolve,
+        )
+        _opSummary.value = summarize(OpType.EXTRACT, acc)
     }
 
     fun consumeNotice() {

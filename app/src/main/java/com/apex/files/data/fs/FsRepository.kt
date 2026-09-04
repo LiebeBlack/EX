@@ -670,6 +670,25 @@ class FsRepository(private val context: Context) {
         dir.toNode()
     }
 
+    /**
+     * Creates an empty file (e.g. a new text file) inside [parent]; returns
+     * null when the name is taken, invalid or the write fails.
+     */
+    suspend fun createFile(parent: FileNode, name: String): FileNode? = withContext(Dispatchers.IO) {
+        val mime = FileKinds.mimeOf(FileNode(name, "", false, 0L, 0L, CategoryEngine.extensionOf(name), CategoryEngine.classify(name)))
+        if (parent.uri != null) return@withContext saf.createFile(parent, name, mime)
+        val file = File(parent.path, name)
+        if (file.exists()) return@withContext null
+        val ok = try {
+            file.parentFile?.mkdirs()
+            file.createNewFile()
+        } catch (e: Exception) {
+            false
+        }
+        if (!ok) return@withContext null
+        file.toNode()
+    }
+
     suspend fun sizeOf(node: FileNode): Long = withContext(Dispatchers.IO) {
         if (node.uri != null) return@withContext saf.sizeOf(node)
         val file = File(node.path)

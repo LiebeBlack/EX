@@ -37,6 +37,12 @@ sealed class Screen {
      *  [index] the track to start from (next/prev move through the list). */
     data class AudioPlayer(val nodes: List<FileNode>, val index: Int = 0, override val serial: Int = 0) : Screen()
     data object About : Screen()
+    /** Per-volume recycle bin with restore / permanent delete / empty. */
+    data object Trash : Screen()
+    /** Batch rename: [nodes] are the selected files to transform. */
+    data class BatchRename(val nodes: List<FileNode>, override val serial: Int = 0) : Screen()
+    /** Built-in hexadecimal viewer for any file. */
+    data class HexViewer(val node: FileNode, override val serial: Int = 0) : Screen()
 }
 
 /**
@@ -91,5 +97,8 @@ class Navigator(initial: Screen = Screen.Home) {
         is Screen.SqliteViewer -> screen.copy(serial = n)
         is Screen.Logcat -> screen
         is Screen.About -> screen
+        is Screen.Trash -> screen
+        is Screen.BatchRename -> screen.copy(serial = n)
+        is Screen.HexViewer -> screen.copy(serial = n)
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,7 +43,13 @@ import com.apex.files.ui.theme.ApexDanger
 import com.apex.files.ui.theme.ApexShapes
 import com.apex.files.ui.theme.ApexSurface1
 
-/** Floating bottom bar shown during multi-selection. */
+/**
+ * Floating bottom bar shown during multi-selection.
+ *
+ * [onCopyPaths] copies the selected paths to the clipboard. [onExtract] is
+ * only rendered when non-null (Explorer shows it for a single selected
+ * archive).
+ */
 @Composable
 fun SelectionBar(
     count: Int,
@@ -53,6 +61,8 @@ fun SelectionBar(
     onShare: () -> Unit,
     onCompress: () -> Unit,
     onProperties: () -> Unit,
+    onCopyPaths: () -> Unit,
+    onExtract: (() -> Unit)? = null,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,6 +96,8 @@ fun SelectionBar(
                 SelectionAction(Icons.AutoMirrored.Outlined.DriveFileMove, "Mover", onMove)
                 SelectionAction(Icons.Outlined.Edit, "Renombrar", onRename)
                 SelectionAction(Icons.Outlined.FolderZip, "Comprimir", onCompress)
+                SelectionAction(Icons.Outlined.Unarchive, "Extraer", onExtract ?: {}, enabled = onExtract != null)
+                SelectionAction(Icons.Outlined.ContentPaste, "Rutas", onCopyPaths)
                 SelectionAction(Icons.Outlined.Share, "Compartir", onShare)
                 SelectionAction(Icons.Outlined.Info, "Propiedades", onProperties)
                 SelectionAction(Icons.Outlined.Delete, "Eliminar", onDelete, danger = true)
@@ -100,6 +112,7 @@ private fun SelectionAction(
     label: String,
     onClick: () -> Unit,
     danger: Boolean = false,
+    enabled: Boolean = true,
 ) {
     Column(
         Modifier
@@ -112,13 +125,25 @@ private fun SelectionAction(
         Icon(
             icon,
             label,
-            tint = if (danger) ApexDanger else MaterialTheme.colorScheme.onBackground,
+            tint = if (danger) {
+                ApexDanger
+            } else if (enabled) {
+                MaterialTheme.colorScheme.onBackground
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            },
             modifier = Modifier.size(20.dp),
         )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (danger) ApexDanger else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (danger) {
+                ApexDanger
+            } else if (enabled) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            },
             textAlign = TextAlign.Center,
             maxLines = 1,
         )

@@ -65,6 +65,10 @@ class SettingsRepository(context: Context) {
     )
     val customAccent: StateFlow<Long> = _customAccent.asStateFlow()
 
+    /** Whether deletions are sent to the Papelera instead of deleted forever. */
+    private val _trashEnabled = MutableStateFlow(prefs.getBoolean(KEY_TRASH_ENABLED, true))
+    val trashEnabled: StateFlow<Boolean> = _trashEnabled.asStateFlow()
+
     fun setAccent(accent: Accent) {
         prefs.edit().putString(KEY_ACCENT, accent.name).apply()
         _accent.value = accent
@@ -97,6 +101,11 @@ class SettingsRepository(context: Context) {
         _sortDirection.value = direction
     }
 
+    fun setTrashEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_TRASH_ENABLED, enabled).apply()
+        _trashEnabled.value = enabled
+    }
+
     private companion object {
         const val KEY_ACCENT = "accent"
         const val KEY_CUSTOM_ACCENT = "accent_custom"
@@ -104,5 +113,6 @@ class SettingsRepository(context: Context) {
         const val KEY_SORT = "sort_order"
         const val KEY_SORT_DIRECTION = "sort_direction"
         const val KEY_VIEW_MODE = "view_mode"
+        const val KEY_TRASH_ENABLED = "trash_enabled"
     }
 }

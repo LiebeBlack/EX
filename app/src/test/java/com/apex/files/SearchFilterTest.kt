@@ -37,6 +37,16 @@ class SearchFilterTest {
     }
 
     @Test
+    fun `name matcher for the in-folder live filter`() {
+        assertTrue(SearchFilters.matchesName("Vacaciones.jpg", "vaca"))
+        assertTrue(SearchFilters.matchesName("Vacaciones.jpg", "VACA"))
+        assertTrue(SearchFilters.matchesName("Vacaciones.jpg", "es.JPG"))
+        assertFalse(SearchFilters.matchesName("Vacaciones.jpg", "playa"))
+        assertTrue(SearchFilters.matchesName("Cualquier cosa", "  "))
+        assertTrue(SearchFilters.matchesName("Cualquier cosa", ""))
+    }
+
+    @Test
     fun `extension wildcards`() {
         assertTrue(SearchFilters.matchesExtension("app.apk", "*.apk"))
         assertTrue(SearchFilters.matchesExtension("App.APK", "*.apk"))
