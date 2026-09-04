@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.stickyHeader
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -102,20 +101,25 @@ fun HexViewerScreen(node: FileNode) {
             }
             state.lines.isEmpty() && !state.loading -> EmptyState(Icons.Outlined.ReportProblem, "Archivo vacío")
             else -> {
+                // Pinned column header above the list; shares the horizontal
+                // scroll state with every data row so all columns stay aligned.
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(hScroll)
+                        .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+                ) {
+                    Text(
+                        HexFormatter.formatHeader(),
+                        style = MonoTextStyleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 LazyColumn(
                     Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(1.dp),
                 ) {
-                    stickyHeader {
-                        Row(Modifier.horizontalScroll(hScroll)) {
-                            Text(
-                                HexFormatter.formatHeader(),
-                                style = MonoTextStyleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
                     items(state.lines) { line ->
                         Row(Modifier.horizontalScroll(hScroll)) {
                             Text(

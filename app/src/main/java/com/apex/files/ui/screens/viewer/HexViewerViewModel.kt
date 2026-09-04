@@ -118,13 +118,24 @@ class HexViewerViewModel(
         _state.update {
             val total = s.loadedBytes + result.size
             val hitEof = result.size < want
-            val totalKnown = it.totalBytes > 0L
+            val known = it.totalBytes > 0L
             val cappedNow = it.capped || total >= MAX_TOTAL
-            more = !hitEof && !cappedNow && (!totalKnown || total < it.totalBytes)
+            // With a known size, stop at the reported end; with an unknown one
+            // (some SAF nodes report size 0), keep streaming until a short read
+            // proves EOF, and only then record the real total.
+            more = if (known) {
+                !hitEof && total < it.totalBytes && !cappedNow
+            } else {
+                !hitEof && !cappedNow
+            }
             it.copy(
                 lines = it.lines + lines,
                 loadedBytes = total,
-                totalBytes = if (it.totalBytes <= 0L) total else it.totalBytes,
+                totalBytes = when {
+                    known -> it.totalBytes
+                    hitEof -> total
+                    else -> it.totalBytes
+                },
                 hasMore = more,
                 capped = cappedNow,
             )
