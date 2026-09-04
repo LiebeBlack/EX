@@ -110,6 +110,7 @@ object StructuredFormat {
             skipWs(s, p)
             when (s.getOrNull(p.i)) {
                 ',' -> {
+                    out.append(',')
                     p.i++
                     continue
                 }
@@ -141,6 +142,7 @@ object StructuredFormat {
             skipWs(s, p)
             when (s.getOrNull(p.i)) {
                 ',' -> {
+                    out.append(',')
                     p.i++
                     continue
                 }
