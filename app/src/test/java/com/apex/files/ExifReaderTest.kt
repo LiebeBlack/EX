@@ -14,7 +14,8 @@ class ExifReaderTest {
 
     /** In-memory little-endian TIFF writer. */
     private class ByteArrayBuilder {
-        private val data = ArrayList<Byte>()
+        // Not private: file-scope extension functions (ifd/tag) need it.
+        val data = ArrayList<Byte>()
 
         fun byte(b: Int) { data.add(b.toByte()) }
         fun bytes(b: ByteArray) { b.forEach { data.add(it) } }
