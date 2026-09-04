@@ -382,7 +382,9 @@ private fun WrappedLines(
             LineRow(
                 number = absolute + 1,
                 content = line.ifEmpty { " " },
-                lineStyle = lineStyle.copy(softWrap = true),
+                // Wrapping is a Text-level concern (Text defaults to softWrap = true);
+                // TextStyle has no softWrap property.
+                lineStyle = lineStyle,
                 color = if (absolute in highlighted) {
                     MaterialTheme.colorScheme.primary
                 } else {

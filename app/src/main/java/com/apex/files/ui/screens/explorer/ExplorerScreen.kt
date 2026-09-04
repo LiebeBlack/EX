@@ -176,14 +176,7 @@ fun ExplorerScreen(location: Location) {
         toast("Ruta(s) copiadas al portapapeles")
     }
 
-    fun extractHere() {
-        launchOperation(OpType.EXTRACT, vm.extractHereFlow())
-    }
-
-    // Single archive selected → the selection bar shows “Extraer aquí”.
-    val selected = state.entries.filter { it.path in state.selection }
-    val canExtract = selected.size == 1 && !selected[0].isDir && container.archive.isSupported(selected[0])
-
+    // Local funs can't be forward-referenced, so declare launchOperation first.
     fun launchOperation(type: OpType, flow: kotlinx.coroutines.flow.Flow<com.apex.files.core.OpProgress>) {
         center.launch(type, flow) { ok ->
             val msg = when {
@@ -194,6 +187,14 @@ fun ExplorerScreen(location: Location) {
             toast(msg)
         }
     }
+
+    fun extractHere() {
+        launchOperation(OpType.EXTRACT, vm.extractHereFlow())
+    }
+
+    // Single archive selected → the selection bar shows “Extraer aquí”.
+    val selected = state.entries.filter { it.path in state.selection }
+    val canExtract = selected.size == 1 && !selected[0].isDir && container.archive.isSupported(selected[0])
 
     Column(Modifier.fillMaxSize()) {
         ApexTopBar(

@@ -29,9 +29,11 @@ class HexFormatterTest {
     @Test
     fun `short final line pads up to full width`() {
         val line = HexFormatter.formatLine(0L, byteArrayOf(0x41), 16)
-        // 48 chars of hex area (2 digits + space per byte, plus center gap)
-        assertTrue(line.contains("41"))
-        assertTrue(line.contains("3 spaces")) // padded area stays blank
+        // Missing bytes keep the hex area's full width (2 digits + space each).
+        val full = HexFormatter.formatLine(0L, ByteArray(16) { 0x41 }, 16)
+        assertEquals(full.length, line.length)
+        // ASCII gutter shows the printable char then blanks up to the pipe.
+        assertTrue(line.endsWith("|A" + " ".repeat(15) + "|"))
     }
 
     @Test

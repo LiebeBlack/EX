@@ -206,7 +206,9 @@ object ExifReader {
             val count = componentCount(enc)
             if (count <= 0 || count > 1_000_000) return null
             val raw = valueOrOffset(enc)
-            val data: ByteArray? = if (count <= 4) {
+            // Both branches yield a non-null buffer; the malformed-offset case
+            // already returned null above.
+            val data = if (count <= 4) {
                 // Short strings live inline in the 4-byte value field, stored
                 // in the TIFF byte order (first char in the first byte).
                 ByteArray(count) { i ->
@@ -217,7 +219,7 @@ object ExifReader {
                 val at = raw.toInt()
                 if (at < 0 || at + count > tiffEnd - tiffStart) return null
                 bytes.copyOfRange(tiffStart + at, tiffStart + at + count)
-            } ?: return null
+            }
             var str = String(data, Charsets.US_ASCII).trim { it <= ' ' }
             str = str.trimEnd('\u0000')
             return str.takeIf { it.isNotEmpty() }
