@@ -502,6 +502,15 @@ internal class OpAccumulator {
         if (firstError == null) firstError = message
     }
 
+    /** Folds another operation result into this accumulator. */
+    operator fun plusAssign(other: OpResult) {
+        bytes += other.bytesDone
+        files += other.filesDone
+        errors += other.errors
+        skipped += other.skipped
+        if (firstError == null) firstError = other.firstError
+    }
+
     fun result(): OpResult = OpResult(
         bytesDone = bytes,
         filesDone = files,

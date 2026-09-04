@@ -10,6 +10,7 @@ import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.data.storage.DrivesRepository
 import com.apex.files.data.storage.ToolRoots
+import com.apex.files.tools.ApkManifestDecoder
 import com.apex.files.tools.ApkScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
