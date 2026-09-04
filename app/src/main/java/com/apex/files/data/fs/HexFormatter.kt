@@ -28,6 +28,16 @@ object HexFormatter {
         return "${offsetHex(offset)}  $hex |$ascii|"
     }
 
+    /** Column header aligned with [formatLine]: "Offset    00 … 0F   |ASCII|". */
+    fun formatHeader(bytesPerLine: Int = BYTES_PER_LINE): String {
+        val hex = StringBuilder(bytesPerLine * 3 + 1)
+        for (i in 0 until bytesPerLine) {
+            if (i == bytesPerLine / 2) hex.append(' ')
+            hex.append(hexNibble(i ushr 4)).append(hexNibble(i)).append(' ')
+        }
+        return "Offset    $hex |" + "ASCII".padEnd(bytesPerLine) + "|"
+    }
+
     /** Formats [bytes] (already at file offset [offset]) into consecutive lines. */
     fun formatWindow(offset: Long, bytes: ByteArray, bytesPerLine: Int = BYTES_PER_LINE): List<String> {
         val lines = ArrayList<String>((bytes.size + bytesPerLine - 1) / bytesPerLine)

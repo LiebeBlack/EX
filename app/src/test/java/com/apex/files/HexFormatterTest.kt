@@ -51,4 +51,29 @@ class HexFormatterTest {
         // 8 bytes + 8 bytes with a gap: "41 41 41 41 41 41 41 41  41 41 …"
         assertTrue(line.contains("41 41 41 41 41 41 41 41  41 41"))
     }
+
+    @Test
+    fun `header has column labels and ascii gutter`() {
+        val header = HexFormatter.formatHeader(16)
+        assertTrue(header.startsWith("Offset"))
+        assertTrue(header.contains("00"))
+        assertTrue(header.contains("07"))
+        assertTrue(header.contains("0F"))
+        assertTrue(header.contains("|ASCII"))
+    }
+
+    @Test
+    fun `header aligns exactly with a full data line`() {
+        val header = HexFormatter.formatHeader(16)
+        val line = HexFormatter.formatLine(0L, ByteArray(16) { 0x41 }, 16)
+        assertEquals(line.length, header.length)
+    }
+
+    @Test
+    fun `header middle gap matches data middle gap`() {
+        val header = HexFormatter.formatHeader(16)
+        val line = HexFormatter.formatLine(0L, ByteArray(16) { 0x41 }, 16)
+        // The gap between hex halves must sit at the same column in both.
+        assertEquals(line.indexOf("  ", 10), header.indexOf("  ", 10))
+    }
 }
