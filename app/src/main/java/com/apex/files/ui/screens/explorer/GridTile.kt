@@ -106,7 +106,7 @@ fun GridTile(
         Spacer(Modifier.height(6.dp))
         Text(
             node.name,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -116,6 +116,7 @@ fun GridTile(
             style = MonoTextStyleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

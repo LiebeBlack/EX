@@ -5,15 +5,17 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import com.apex.files.core.Accent
 
+import androidx.compose.ui.graphics.Color
+
 private fun apexColorScheme(accent: Accent) = darkColorScheme(
     primary = accentColor(accent),
-    onPrimary = ApexBlack,
+    onPrimary = onAccentColor(accent),
     secondary = ApexViolet,
-    onSecondary = ApexBlack,
+    onSecondary = Color.White,
     tertiary = accentColor(accent),
-    onTertiary = ApexBlack,
+    onTertiary = onAccentColor(accent),
     error = ApexDanger,
-    onError = ApexTextPrimary,
+    onError = Color.White,
     background = ApexBlack,
     onBackground = ApexTextPrimary,
     surface = ApexSurface1,
@@ -21,14 +23,15 @@ private fun apexColorScheme(accent: Accent) = darkColorScheme(
     surfaceVariant = ApexContainer,
     onSurfaceVariant = ApexTextSecondary,
     outline = ApexBorder,
-    outlineVariant = ApexBorder,
+    outlineVariant = ApexBorderSubtle,
     surfaceContainerLowest = ApexBlack,
     surfaceContainerLow = ApexSurface1,
     surfaceContainer = ApexContainer,
-    surfaceContainerHigh = ApexContainer,
-    surfaceContainerHighest = ApexContainer,
-    surfaceBright = ApexContainer,
+    surfaceContainerHigh = ApexContainerHigh,
+    surfaceContainerHighest = ApexContainerHighest,
+    surfaceBright = ApexContainerHigh,
     surfaceDim = ApexBlack,
+    surfaceTint = accentColor(accent),
     inverseSurface = ApexTextPrimary,
     inverseOnSurface = ApexBlack,
     inversePrimary = accentColor(accent),

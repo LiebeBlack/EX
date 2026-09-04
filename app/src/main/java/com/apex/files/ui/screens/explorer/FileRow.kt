@@ -52,7 +52,7 @@ fun FileRow(
     modifier: Modifier = Modifier,
 ) {
     val shape = ApexShapes.small
-    val container = if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent
+    val container = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent
     val border = if (selected) {
         BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
     } else {

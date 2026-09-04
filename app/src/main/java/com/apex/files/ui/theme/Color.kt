@@ -5,17 +5,29 @@ import com.apex.files.core.Accent
 
 // ---- Exact OLED palette (spec) ----
 val ApexBlack = Color(0xFF000000)          // Background principal — píxeles apagados
-val ApexSurface1 = Color(0xFF070709)       // Superficie 1
-val ApexContainer = Color(0xFF0F0F14)      // Contenedores
-val ApexBorder = Color(0xFF1E1E28)         // Borde ultrafino 1dp
-val ApexCyan = Color(0xFF00E5FF)           // Acento primario
-val ApexViolet = Color(0xFF7C4DFF)         // Acento secundario
-val ApexEmerald = Color(0xFF00E676)        // Acento alternativo
-val ApexAmber = Color(0xFFFFAB00)          // Acento alternativo
+val ApexSurface1 = Color(0xFF08080D)       // Superficie 1
+val ApexContainer = Color(0xFF101018)      // Contenedores estándar
+val ApexContainerHigh = Color(0xFF161622)  // Contenedores elevados (diálogos, hojas)
+val ApexContainerHighest = Color(0xFF1D1D2C) // Contenedores superiores / badges
+val ApexBorder = Color(0xFF222230)         // Borde ultrafino 1dp
+val ApexBorderSubtle = Color(0xFF161622)   // Borde muy sutil para separadores
+val ApexBorderFocused = Color(0xFF38384E)  // Borde para elementos enfocados
+
+// ---- Accent colors ----
+val ApexCyan = Color(0xFF00E5FF)           // Acento primario (cian neón)
+val ApexViolet = Color(0xFF7C4DFF)         // Acento secundario (violeta profundo)
+val ApexEmerald = Color(0xFF00E676)        // Acento alternativo (esmeralda neón)
+val ApexAmber = Color(0xFFFFAB00)          // Acento alternativo (ámbar neón)
 val ApexDanger = Color(0xFFFF2A6D)         // Alerta / peligro
-val ApexTextPrimary = Color(0xFFFFFFFF)
-val ApexTextSecondary = Color(0xFFA3A3AB)
-val ApexTextMuted = Color(0xFF8C8C94)
+val ApexSuccess = Color(0xFF00E676)        // Éxito / completado
+val ApexWarning = Color(0xFFFFAB00)        // Advertencia
+val ApexInfo = Color(0xFF00E5FF)           // Información
+
+// ---- Text colors ----
+val ApexTextPrimary = Color(0xFFFFFFFF)    // Blanco puro para títulos y texto principal
+val ApexTextSecondary = Color(0xFFA6A6B2)  // Gris claro con alto contraste para subtítulos
+val ApexTextMuted = Color(0xFF7E7E8C)      // Gris medio para pistas y metadatos secundarios
+val ApexTextDisabled = Color(0xFF52525E)   // Gris oscuro para estados deshabilitados
 
 /** Maps the selected accent preset to its Color. */
 fun accentColor(accent: Accent): Color = when (accent) {
@@ -23,4 +35,12 @@ fun accentColor(accent: Accent): Color = when (accent) {
     Accent.VIOLET -> ApexViolet
     Accent.EMERALD -> ApexEmerald
     Accent.AMBER -> ApexAmber
+}
+
+/** Provides high-contrast foreground color on top of the accent color. */
+fun onAccentColor(accent: Accent): Color = when (accent) {
+    Accent.VIOLET -> Color.White
+    Accent.CYAN -> ApexBlack
+    Accent.EMERALD -> ApexBlack
+    Accent.AMBER -> ApexBlack
 }

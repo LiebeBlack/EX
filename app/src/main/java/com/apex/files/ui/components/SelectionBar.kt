@@ -35,8 +35,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.apex.files.ui.theme.ApexBlack
 import com.apex.files.ui.theme.ApexBorder
+import com.apex.files.ui.theme.ApexBorderSubtle
+import com.apex.files.ui.theme.ApexContainerHigh
 import com.apex.files.ui.theme.ApexDanger
 import com.apex.files.ui.theme.ApexShapes
+import com.apex.files.ui.theme.ApexSurface1
 
 /** Floating bottom bar shown during multi-selection. */
 @Composable
@@ -56,7 +59,7 @@ fun SelectionBar(
     Surface(
         modifier = modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp),
         shape = ApexShapes.medium,
-        color = com.apex.files.ui.theme.ApexContainer,
+        color = ApexContainerHigh,
         border = BorderStroke(1.dp, ApexBorder),
     ) {
         Column(Modifier.padding(vertical = 8.dp)) {
@@ -66,7 +69,7 @@ fun SelectionBar(
             ) {
                 Text(
                     "$count seleccionados",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
@@ -100,8 +103,8 @@ private fun SelectionAction(
 ) {
     Column(
         Modifier
-            .padding(horizontal = 6.dp)
-            .background(ApexBlack, MaterialTheme.shapes.small)
+            .padding(horizontal = 4.dp)
+            .background(ApexSurface1, MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

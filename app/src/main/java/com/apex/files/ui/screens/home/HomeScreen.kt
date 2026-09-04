@@ -41,8 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.data.fs.DateFormatter
@@ -126,7 +128,11 @@ fun HomeScreen() {
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Almacenamiento", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Almacenamiento",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
                     Spacer(Modifier.weight(1f))
                     if (state.indexing) {
                         Text("Indexando…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
@@ -187,7 +193,11 @@ fun HomeScreen() {
                     Icon(Icons.Outlined.Insights, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Estadísticas de almacenamiento", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Estadísticas de almacenamiento",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
                         Text(
                             "Tipos de archivo, tamaños y más grandes",
                             style = MaterialTheme.typography.labelSmall,
@@ -292,7 +302,14 @@ fun HomeScreen() {
                                 tint = if (drive.removable) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text(drive.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                drive.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
@@ -300,7 +317,11 @@ fun HomeScreen() {
                     Modifier.fillMaxWidth(),
                     onClick = { navigator.push(Screen.Drives) },
                 ) {
-                    Text("Gestionar unidades · USB-OTG", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Gestionar unidades · USB-OTG",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -310,9 +331,12 @@ fun HomeScreen() {
 @Composable
 private fun SectionLabel(text: String) {
     Text(
-        text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        text.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.2.sp,
+        ),
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 20.dp, top = 22.dp, bottom = 10.dp),
     )
 }
@@ -328,9 +352,20 @@ private fun ToolCard(
     ApexCard(onClick = onClick, modifier = modifier) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(22.dp).width(22.dp))
         Spacer(Modifier.height(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(2.dp))
-        Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+        )
     }
 }
 
@@ -349,7 +384,13 @@ private fun FavoriteCard(
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(node.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    node.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     if (node.isDir) "Carpeta" else SizeFormatter.format(node.size),
                     style = MonoTextStyleSmall,
@@ -423,7 +464,13 @@ private fun CategoryTile(
     ApexCard(onClick = onClick, modifier = modifier, contentPadding = PaddingValues(10.dp)) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp).width(20.dp))
         Spacer(Modifier.height(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Text(
             count.toString(),
             style = MonoTextStyleSmall,

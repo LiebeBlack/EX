@@ -15,7 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.ImeAction
 import com.apex.files.ui.theme.ApexBorder
-import com.apex.files.ui.theme.ApexContainer
+import com.apex.files.ui.theme.ApexContainerHigh
 import com.apex.files.ui.theme.ApexDanger
 
 @Composable
@@ -29,11 +29,23 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = ApexContainer,
+        containerColor = ApexContainerHigh,
         titleContentColor = MaterialTheme.colorScheme.onBackground,
         textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        title = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
+        title = {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        },
+        text = {
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
@@ -45,7 +57,11 @@ fun ConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Cancelar",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         },
     )
@@ -62,9 +78,15 @@ fun InputDialog(
     var value by remember { mutableStateOf(initialValue) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = ApexContainer,
+        containerColor = ApexContainerHigh,
         titleContentColor = MaterialTheme.colorScheme.onBackground,
-        title = { Text(title, style = MaterialTheme.typography.titleMedium) },
+        title = {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        },
         text = {
             OutlinedTextField(
                 value = value,
@@ -76,8 +98,8 @@ fun InputDialog(
                     if (value.isNotBlank()) onConfirm(value.trim())
                 }),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = ApexContainer,
-                    unfocusedContainerColor = ApexContainer,
+                    focusedContainerColor = ApexContainerHigh,
+                    unfocusedContainerColor = ApexContainerHigh,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = ApexBorder,
                     cursorColor = MaterialTheme.colorScheme.primary,
@@ -88,12 +110,20 @@ fun InputDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(value.trim()) }, enabled = value.isNotBlank()) {
-                Text("Aceptar", color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Aceptar",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Cancelar",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         },
     )

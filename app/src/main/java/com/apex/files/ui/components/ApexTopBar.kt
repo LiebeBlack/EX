@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,8 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.apex.files.ui.theme.ApexBlack
+import com.apex.files.ui.theme.ApexBorderSubtle
 
-/** Flat black top bar: back arrow, title (optionally with a subtitle), actions. */
+/** Flat black top bar: back arrow, title (optionally with a subtitle), actions, with subtle border. */
 @Composable
 fun ApexTopBar(
     title: String,
@@ -28,35 +30,42 @@ fun ApexTopBar(
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    Row(
+    Column(
         modifier
             .fillMaxWidth()
-            .background(ApexBlack)
-            .statusBarsPadding()
-            .heightIn(min = 58.dp)
-            .padding(horizontal = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .background(ApexBlack),
     ) {
-        if (onBack != null) {
-            ApexIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "Atrás", onClick = onBack)
-        }
-        Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (subtitle != null) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .heightIn(min = 58.dp)
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (onBack != null) {
+                ApexIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "Atrás", onClick = onBack)
+            }
+            Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 Text(
-                    subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
+            actions()
         }
-        actions()
+        HorizontalDivider(color = ApexBorderSubtle, thickness = 1.dp)
     }
 }

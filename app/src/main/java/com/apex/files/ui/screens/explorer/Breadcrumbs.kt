@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.apex.files.data.model.FileNode
@@ -34,7 +35,7 @@ fun Breadcrumbs(
         modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 14.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         for (ancestor in ancestors) {
@@ -45,7 +46,7 @@ fun Breadcrumbs(
                 maxLines = 1,
                 modifier = Modifier
                     .clickable { onNavigate(ancestor) }
-                    .padding(horizontal = 2.dp),
+                    .padding(horizontal = 3.dp, vertical = 2.dp),
             )
             Icon(
                 Icons.AutoMirrored.Outlined.KeyboardArrowRight,
@@ -56,12 +57,12 @@ fun Breadcrumbs(
         }
         Text(
             current.name,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 2.dp),
+            modifier = Modifier.padding(horizontal = 3.dp, vertical = 2.dp),
         )
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(6.dp))
     }
 }
