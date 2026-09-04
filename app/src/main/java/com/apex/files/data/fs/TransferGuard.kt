@@ -29,10 +29,13 @@ object TransferGuard {
      * plain absolute paths without touching the filesystem.
      */
     fun sameOrDescendant(dest: String, src: String): Boolean {
-        if (dest == src) return true
-        val base = src.trimEnd('/')
-        if (base.isEmpty()) return dest.startsWith("/")
-        return dest.startsWith("$base/")
+        // Both sides are normalized so trailing separators never matter
+        // ("a/b/" vs "a/b" is the same node).
+        val d = dest.trimEnd('/')
+        val s = src.trimEnd('/')
+        if (d == s) return true
+        if (s.isEmpty()) return d.startsWith("/")
+        return d.startsWith("$s/")
     }
 
     /** Same test for SAF document ids ("primary:Download/A" style). */

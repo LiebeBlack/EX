@@ -172,8 +172,13 @@ object StructuredFormat {
         val out = StringBuilder(input.length + 32)
         val stack = ArrayList<String>()
         val p = Pos(0)
+        var firstLine = true
 
         fun line() {
+            if (firstLine) {
+                firstLine = false
+                return
+            }
             out.append('\n')
             repeat(stack.size) { out.append("  ") }
         }

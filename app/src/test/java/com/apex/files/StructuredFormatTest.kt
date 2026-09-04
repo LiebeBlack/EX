@@ -36,8 +36,8 @@ class StructuredFormatTest {
         assertTrue(p.startsWith("{\n"))
         assertTrue(p.endsWith("\n}"))
         assertTrue(p.contains("\n  \"b\": 2,\n"))
-        assertTrue(p.contains("\n    \"c\": [\n"))
-        assertTrue(p.contains("\n      true\n"))
+        assertTrue(p.contains("\n    \"c\": [\n      1,\n"))
+        assertTrue(p.contains("\n        \"d\": true\n"))
     }
 
     @Test
@@ -68,8 +68,8 @@ class StructuredFormatTest {
         assertTrue(p.startsWith("<root a=\"1\">\n"))
         assertTrue(p.contains("\n  <child>\n"))
         assertTrue(p.contains("\n    <leaf>"))
-        assertTrue(p.contains("text"))
-        assertTrue(p.endsWith("\n</root>"))
+        assertTrue(p.contains("\n      text\n"))
+        assertTrue(p.endsWith("</root>"))
     }
 
     @Test

@@ -30,7 +30,7 @@ class MemoryIndexTest {
         index.put(file("/x/d", 2_000_000))
         val top = index.largestFiles(2)
         assertEquals(listOf("/x/d", "/x/b"), top.map { it.path })
-        assertEquals(listOf("/x/b"), index.largestFiles(1).map { it.path })
+        assertEquals(listOf("/x/d"), index.largestFiles(1).map { it.path })
         assertTrue(index.largestFiles(0).isEmpty())
     }
 
