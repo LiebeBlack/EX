@@ -96,8 +96,8 @@ object BatchRenamer {
     fun split(name: String): Pair<String, String> {
         val dot = name.lastIndexOf('.')
         // Hidden files (".gitignore") and dot-prefixed stems keep the whole
-        // name as stem; "file." keeps an empty extension.
-        return if (dot > 0 && !name.startsWith(".")) {
+        // name as stem; a trailing dot ("file.") is not an extension.
+        return if (dot > 0 && dot < name.length - 1 && !name.startsWith(".")) {
             name.substring(0, dot) to name.substring(dot)
         } else {
             name to ""

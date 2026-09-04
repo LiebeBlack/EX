@@ -61,10 +61,12 @@ class BatchRenamerTest {
     fun `duplicate targets are reported as errors and left unchanged`() {
         val plan = BatchRenamer.plan(
             listOf("a.txt", "b.txt"),
-            Options(replace = "", find = "a"),
+            Options(find = "b", replace = "a"),
         )
+        // "b.txt" → stem "a" collides with the first item's target.
         assertFalse(plan.errors.isEmpty())
         assertEquals("a.txt", namesOf(plan)["a.txt"])
+        assertEquals("b.txt", namesOf(plan)["b.txt"])
     }
 
     @Test

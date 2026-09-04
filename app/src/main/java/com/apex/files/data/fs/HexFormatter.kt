@@ -17,7 +17,7 @@ object HexFormatter {
             if (i < bytes.size) {
                 val b = bytes[i].toInt() and 0xFF
                 if (i == bytesPerLine / 2) hex.append(' ')
-                hex.append(hexNibble(b ushr 4)).append(hexNibble(b)).append(' ')
+                hex.append(hexNibble(b ushr 4)).append(hexNibble(b and 0xF)).append(' ')
                 ascii.append(if (b in 0x20..0x7E) b.toChar() else '.')
             } else {
                 if (i == bytesPerLine / 2) hex.append(' ')

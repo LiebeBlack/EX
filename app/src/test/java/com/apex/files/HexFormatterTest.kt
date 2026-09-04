@@ -15,15 +15,16 @@ class HexFormatterTest {
     @Test
     fun `single line has offset hex and ascii gutter`() {
         val line = HexFormatter.formatLine(0x40L, byteArrayOf(0x48, 0x65, 0x6C, 0x6C, 0x6F))
-        assertTrue(line.startsWith("00000040"))
-        assertTrue(line.contains("48 65 6C 6C 6F"))
-        assertTrue(line.contains("|Hello|"))
+        assertTrue(line.startsWith("00000040  48 65 6C 6C 6F"))
+        // ASCII gutter is fixed-width: content padded with blanks up to the pipe.
+        assertTrue(line.endsWith("|Hello" + " ".repeat(11) + "|"))
     }
 
     @Test
     fun `non printable ascii becomes dots`() {
         val line = HexFormatter.formatLine(0L, byteArrayOf(0x00, 0x01, 0x02, 0x1F))
-        assertTrue(line.contains("|....|"))
+        assertTrue(line.startsWith("00000000  00 01 02 1F"))
+        assertTrue(line.endsWith("|...." + " ".repeat(12) + "|"))
     }
 
     @Test

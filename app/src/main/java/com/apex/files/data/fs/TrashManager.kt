@@ -145,6 +145,8 @@ class TrashManager(
             ensureActive()
             deleteRecursive(c, acc)
         }
+        // Drop the now-empty hidden folder too; trash() recreates it on demand.
+        runCatching { trashDir.delete() }
         acc.result()
     }
 

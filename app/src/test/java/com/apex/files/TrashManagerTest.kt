@@ -65,7 +65,7 @@ class TrashManagerTest {
     @Test
     fun `restore puts the file back at its original location`() = runBlocking {
         val file = File(tmp.root, "report.pdf")
-        writeFile(file)
+        writeFile(file, "report.pdf")
         val node = FileNode("report.pdf", file.absolutePath, false, 5L, 0L)
         val m = manager()
         m.trash(node)
