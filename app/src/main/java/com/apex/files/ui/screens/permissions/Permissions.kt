@@ -36,6 +36,16 @@ object Permissions {
         }
     }
 
+    /**
+     * Android 14+ “Select photos” partial grant: the user picked specific
+     * images/videos but did not grant full library access.
+     */
+    fun hasPartialMediaAccess(context: Context): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            !mediaGranted(context) &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) ==
+            PackageManager.PERMISSION_GRANTED
+
     fun isGranted(context: Context): Boolean = allFilesGranted(context) && mediaGranted(context)
 
     fun allFilesSettingsIntent(context: Context): Intent =

@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +55,7 @@ fun PropertiesSheet(
     onDismiss: () -> Unit,
     onComputeHash: (HashAlgorithm) -> Unit,
     onCopyText: (String) -> Unit,
+    onOpenWith: (() -> Unit)? = null,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -132,6 +134,33 @@ fun PropertiesSheet(
             }
 
             HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+
+            if (!node.isDir && onOpenWith != null) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(ApexShapes.small)
+                        .background(ApexContainer)
+                        .clickable(onClick = onOpenWith)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Outlined.OpenInNew,
+                        "Abrir con",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Abrir con otra aplicación",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+            }
 
             if (!node.isDir) {
                 HashRow(

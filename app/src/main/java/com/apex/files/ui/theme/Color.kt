@@ -29,18 +29,44 @@ val ApexTextSecondary = Color(0xFFA6A6B2)  // Gris claro con alto contraste para
 val ApexTextMuted = Color(0xFF7E7E8C)      // Gris medio para pistas y metadatos secundarios
 val ApexTextDisabled = Color(0xFF52525E)   // Gris oscuro para estados deshabilitados
 
-/** Maps the selected accent preset to its Color. */
-fun accentColor(accent: Accent): Color = when (accent) {
-    Accent.CYAN -> ApexCyan
-    Accent.VIOLET -> ApexViolet
-    Accent.EMERALD -> ApexEmerald
-    Accent.AMBER -> ApexAmber
-}
+/** Extra curated colors for the “Personalizado” accent picker. */
+val ApexCustomAccentPalette: List<Long> = listOf(
+    0xFF00E5FF, // cian
+    0xFF00B8FF, // azul neón
+    0xFF2979FF, // azul eléctrico
+    0xFF7C4DFF, // violeta
+    0xFFB388FF, // lavanda
+    0xFFE040FB, // magenta
+    0xFFFF2A6D, // rosa neón
+    0xFFFF3D00, // naranja
+    0xFFFFAB00, // ámbar
+    0xFF00E676, // esmeralda
+    0xFF00C853, // verde
+    0xFFFFF176, // limón
+)
 
-/** Provides high-contrast foreground color on top of the accent color. */
-fun onAccentColor(accent: Accent): Color = when (accent) {
-    Accent.VIOLET -> Color.White
-    Accent.CYAN -> ApexBlack
-    Accent.EMERALD -> ApexBlack
-    Accent.AMBER -> ApexBlack
+/** Effective ARGB hex for the active accent. */
+fun accentHex(accent: Accent, customHex: Long = Accent.CYAN.hex): Long =
+    if (accent == Accent.CUSTOM) customHex else accent.hex
+
+/** Maps the selected accent (preset or custom) to its Color. */
+fun accentColor(accent: Accent, customHex: Long = Accent.CYAN.hex): Color =
+    Color(accentHex(accent, customHex))
+
+/**
+ * Provides a high-contrast foreground for content placed directly on the
+ * accent color. Presets keep their curated pairing; custom colors pick
+ * white/black by luminance.
+ */
+fun onAccentColor(accent: Accent, customHex: Long = Accent.CYAN.hex): Color {
+    if (accent == Accent.CUSTOM) {
+        return if (accentColor(accent, customHex).luminance() > 0.55f) ApexBlack else Color.White
+    }
+    return when (accent) {
+        Accent.VIOLET -> Color.White
+        Accent.CYAN -> ApexBlack
+        Accent.EMERALD -> ApexBlack
+        Accent.AMBER -> ApexBlack
+        Accent.CUSTOM -> Color.White
+    }
 }

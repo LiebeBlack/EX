@@ -23,6 +23,8 @@ class ApkScanner(private val context: Context, private val fs: FsRepository) {
         val packageName: String?,
         /** null = cannot determine (SAF-backed or unreadable archive). */
         val installed: Boolean?,
+        /** True for .xapk / .apks / .apkm containers (inner APKs inside). */
+        val container: Boolean = false,
     )
 
     data class ApkScan(
@@ -46,7 +48,7 @@ class ApkScanner(private val context: Context, private val fs: FsRepository) {
                 if (Paths.isExcluded(child.path)) continue
                 if (child.isDir) {
                     walk(child)
-                } else if (child.category == Category.APK) {
+                } else if (child.category == Category.APK || isContainer(child.name)) {
                     val info = inspect(child, pm, installedPackages)
                     results.add(info)
                     emit(ApkScan(currentPath = child.path, scanned = results.size))
@@ -59,6 +61,10 @@ class ApkScanner(private val context: Context, private val fs: FsRepository) {
         emit(ApkScan(scanned = sorted.size, done = true, apks = sorted))
     }.flowOn(Dispatchers.IO)
 
+    /** True for multi-APK containers (.xapk/.apks/.apkm). */
+    private fun isContainer(name: String): Boolean =
+        ApkManifestDecoder.isContainer(name)
+
     @Suppress("DEPRECATION")
     private fun inspect(
         node: FileNode,
@@ -66,7 +72,11 @@ class ApkScanner(private val context: Context, private val fs: FsRepository) {
         installedPackages: Set<String>,
     ): ApkInfo {
         if (node.uri != null) {
-            return ApkInfo(node, null, null)
+            return ApkInfo(node, null, null, container = isContainer(node.name))
+        }
+        if (isContainer(node.name)) {
+            // Containers are ZIPs: PackageManager cannot inspect them.
+            return ApkInfo(node, null, null, container = true)
         }
         val file = java.io.File(node.path)
         val packageName = runCatching {

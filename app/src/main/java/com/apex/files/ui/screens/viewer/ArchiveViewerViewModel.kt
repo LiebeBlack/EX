@@ -4,11 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.core.OpProgress
-import com.apex.files.core.OpType
 import com.apex.files.data.fs.ArchiveEntry
 import com.apex.files.data.fs.ArchiveRepository
+import com.apex.files.data.fs.OpResult
 import com.apex.files.data.model.FileNode
-import com.apex.files.ui.components.OperationCenterViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +19,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Virtual folder navigation inside a compressed archive. Entries are listed
- * lazily by prefix; extraction streams only the requested entries.
+ * lazily by prefix; extraction streams only the requested entries and pauses
+ * on name collisions for a per-file decision.
  */
 class ArchiveViewerViewModel(
     private val container: AppContainer,
@@ -37,6 +37,9 @@ class ArchiveViewerViewModel(
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    private val _opSummary = MutableStateFlow<String?>(null)
+    val opSummary: StateFlow<String?> = _opSummary.asStateFlow()
 
     private var handle: ArchiveRepository.Handle? = null
 
@@ -77,7 +80,42 @@ class ArchiveViewerViewModel(
     }
 
     fun extractFlow(entry: ArchiveEntry, destDir: FileNode): Flow<OpProgress> = flow {
-        container.archive.extract(entry, node, destDir) { emit(it) }
+        _opSummary.value = null
+        val acc = container.archive.extract(
+            entry,
+            node,
+            destDir,
+            onProgress = { emit(it) },
+            onConflict = container.conflicts::resolve,
+        )
+        _opSummary.value = summarize(acc)
+    }
+
+    /** Extracts the entire archive into [destDir]. */
+    fun extractAllFlow(destDir: FileNode): Flow<OpProgress> = flow {
+        _opSummary.value = null
+        val acc = container.archive.extractAll(
+            node,
+            destDir,
+            onProgress = { emit(it) },
+            onConflict = container.conflicts::resolve,
+        )
+        _opSummary.value = summarize(acc)
+    }
+
+    private fun summarize(acc: OpResult): String {
+        val parts = buildList {
+            add("Extraídos: ${acc.filesDone} archivo(s)")
+            if (acc.skipped > 0) add("${acc.skipped} omitidos")
+            if (acc.errors > 0) add("${acc.errors} errores")
+        }
+        return parts.joinToString(" · ")
+    }
+
+    fun consumeSummary(): String? {
+        val v = _opSummary.value
+        _opSummary.value = null
+        return v
     }
 
     private fun recomputeCurrent() {

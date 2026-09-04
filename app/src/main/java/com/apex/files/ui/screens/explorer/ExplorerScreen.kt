@@ -23,23 +23,27 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,9 +60,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.core.OpType
+import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
+import com.apex.files.data.model.SortDirection
 import com.apex.files.data.model.SortOrder
+import com.apex.files.data.model.ViewMode
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.LocalOperationCenter
@@ -95,6 +102,14 @@ fun ExplorerScreen(location: Location) {
 
     val toast: (String) -> Unit = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
 
+    // One-shot failures (rename / new folder) surfaced as toasts.
+    LaunchedEffect(state.notice) {
+        state.notice?.let { msg ->
+            toast(msg)
+            vm.consumeNotice()
+        }
+    }
+
     // Internal back handling (selection / destination / directory up).
     BackHandler(enabled = state.selectionMode || state.destMode != null || vm.canGoUp()) {
         when {
@@ -106,6 +121,18 @@ fun ExplorerScreen(location: Location) {
 
     fun openFile(node: FileNode) {
         NodeOpener.open(node, container, navigator, context, imageContext = state.entries) { msg -> toast(msg) }
+    }
+
+    fun openWithChooser(node: FileNode) {
+        val uri = container.fs.shareUri(node) ?: run {
+            toast("No se pudo abrir con otra aplicación")
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, FileKinds.mimeOf(node))
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching { context.startActivity(Intent.createChooser(intent, "Abrir con")) }
+            .onFailure { toast("No hay aplicación para este tipo de archivo") }
     }
 
     fun shareSelected() {
@@ -125,8 +152,12 @@ fun ExplorerScreen(location: Location) {
 
     fun launchOperation(type: OpType, flow: kotlinx.coroutines.flow.Flow<com.apex.files.core.OpProgress>) {
         center.launch(type, flow) { ok ->
+            val msg = when {
+                ok -> vm.consumeSummary() ?: "Operación completada"
+                else -> center.lastError.value ?: vm.consumeError() ?: "Operación cancelada"
+            }
             vm.onOperationFinished(ok)
-            toast(if (ok) "Operación completada" else "Operación cancelada")
+            toast(msg)
         }
     }
 
@@ -165,12 +196,34 @@ fun ExplorerScreen(location: Location) {
                                 } else null,
                             )
                         }
+                        HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+                        SortDirection.entries.forEach { direction ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (direction == SortDirection.ASC) "Ascendente (A→Z)" else "Descendente (Z→A)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                },
+                                onClick = {
+                                    vm.setSortDirection(direction)
+                                    sortMenuOpen = false
+                                },
+                                leadingIcon = if (state.sortDir == direction) {
+                                    { Icon(Icons.Outlined.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
+                                } else null,
+                            )
+                        }
                     }
                 }
                 ApexIconButton(
-                    if (state.viewMode == com.apex.files.data.model.ViewMode.LIST) Icons.Outlined.GridView else Icons.AutoMirrored.Outlined.ViewList,
+                    if (state.viewMode == ViewMode.LIST) Icons.Outlined.GridView else Icons.AutoMirrored.Outlined.ViewList,
                     "Cambiar vista",
                 ) { vm.toggleViewMode() }
+                ApexIconButton(
+                    if (state.showHidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    if (state.showHidden) "Ocultar archivos ocultos" else "Mostrar archivos ocultos",
+                ) { vm.setShowHidden(!state.showHidden) }
                 ApexIconButton(Icons.Outlined.Add, "Nueva carpeta") { showNewFolderDialog = true }
             },
         )
@@ -237,7 +290,7 @@ fun ExplorerScreen(location: Location) {
                     onRefresh = { vm.refresh() },
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    if (state.viewMode == com.apex.files.data.model.ViewMode.LIST) {
+                    if (state.viewMode == ViewMode.LIST) {
                         LazyColumn(
                             Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
@@ -257,7 +310,7 @@ fun ExplorerScreen(location: Location) {
                                     },
                                     onLongClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        vm.enterSelection(node)
+                                        vm.longPress(node)
                                     },
                                 )
                             }
@@ -284,7 +337,7 @@ fun ExplorerScreen(location: Location) {
                                     },
                                     onLongClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        vm.enterSelection(node)
+                                        vm.longPress(node)
                                     },
                                 )
                             }
@@ -379,6 +432,7 @@ fun ExplorerScreen(location: Location) {
                 clipboard.setText(AnnotatedString(text))
                 toast("Copiado")
             },
+            onOpenWith = { if (!props.node.isDir) openWithChooser(props.node) },
         )
     }
 }

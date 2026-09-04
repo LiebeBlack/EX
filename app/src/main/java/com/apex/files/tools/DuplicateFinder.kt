@@ -111,4 +111,17 @@ object DuplicateAlgorithm {
         }
         return groups
     }
+
+    /**
+     * Smart default for "select duplicates": keep the most recently
+     * modified copy per group and return the rest for deletion. Ties are
+     * broken keeping the lexicographically smallest path.
+     */
+    fun filesToDelete(files: List<FileNode>): List<FileNode> {
+        if (files.size < 2) return emptyList()
+        val keeper = files.maxWithOrNull(
+            compareBy<FileNode> { it.lastModified }.thenByDescending { it.path }
+        ) ?: return files.drop(1)
+        return files.filterNot { it.path == keeper.path }
+    }
 }

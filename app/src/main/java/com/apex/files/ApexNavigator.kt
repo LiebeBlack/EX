@@ -28,6 +28,15 @@ sealed class Screen {
     data class TextViewer(val node: FileNode, override val serial: Int = 0) : Screen()
     data class PdfViewer(val node: FileNode, override val serial: Int = 0) : Screen()
     data class ArchiveViewer(val node: FileNode, override val serial: Int = 0) : Screen()
+    /** SQLite database analyzer (read-only). */
+    data class SqliteViewer(val node: FileNode, override val serial: Int = 0) : Screen()
+    /** System log console (logcat). READ_LOGS is only granted on debug
+     *  builds / via ADB, so it may show a permission notice on release. */
+    data object Logcat : Screen()
+    /** In-app audio player: [nodes] are the neighboring audio tracks and
+     *  [index] the track to start from (next/prev move through the list). */
+    data class AudioPlayer(val nodes: List<FileNode>, val index: Int = 0, override val serial: Int = 0) : Screen()
+    data object About : Screen()
 }
 
 /**
@@ -78,5 +87,9 @@ class Navigator(initial: Screen = Screen.Home) {
         is Screen.TextViewer -> screen.copy(serial = n)
         is Screen.PdfViewer -> screen.copy(serial = n)
         is Screen.ArchiveViewer -> screen.copy(serial = n)
+        is Screen.AudioPlayer -> screen.copy(serial = n)
+        is Screen.SqliteViewer -> screen.copy(serial = n)
+        is Screen.Logcat -> screen
+        is Screen.About -> screen
     }
 }

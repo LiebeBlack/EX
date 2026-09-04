@@ -28,7 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,6 +44,7 @@ import com.apex.files.data.model.FileNode
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.LocalOperationCenter
 import com.apex.files.ui.apexViewModel
+import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.EmptyState
 import com.apex.files.ui.components.NeonProgressBar
@@ -56,6 +59,8 @@ fun ArchiveViewerScreen(node: FileNode) {
     val key = remember { "archive-${node.path}" }
     val vm: ArchiveViewerViewModel = apexViewModel(key = key) { c -> ArchiveViewerViewModel(c, node) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Set once the Downloads destination is resolved; invoked by the top bar.
+    var extractAll by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     BackHandler(enabled = vm.canGoUp()) { vm.goUp() }
 
@@ -69,6 +74,13 @@ fun ArchiveViewerScreen(node: FileNode) {
                 state.currentPath.trimEnd('/')
             } else {
                 "Archivo comprimido · raíz"
+            },
+            actions = {
+                ApexIconButton(
+                    Icons.Outlined.FileDownload,
+                    "Extraer todo",
+                    onClick = { extractAll?.invoke() },
+                )
             },
         )
 
@@ -107,6 +119,18 @@ fun ArchiveViewerScreen(node: FileNode) {
                         )
                     }
                 }
+                // Wired to the “Extraer todo” top-bar action.
+                extractAll = {
+                    val dir = destDir
+                    center.launch(OpType.EXTRACT, vm.extractAllFlow(dir)) { ok ->
+                        val msg = if (ok) {
+                            vm.consumeSummary() ?: "Extraído en Descargas"
+                        } else {
+                            center.lastError.value ?: "Extracción cancelada"
+                        }
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
@@ -119,11 +143,12 @@ fun ArchiveViewerScreen(node: FileNode) {
                             },
                             onExtract = {
                                 center.launch(OpType.EXTRACT, vm.extractFlow(entry, destDir)) { ok ->
-                                    Toast.makeText(
-                                        context,
-                                        if (ok) "Extraído en Descargas" else "Extracción cancelada",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    val msg = if (ok) {
+                                        vm.consumeSummary() ?: "Extraído en Descargas"
+                                    } else {
+                                        center.lastError.value ?: "Extracción cancelada"
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 }
                             },
                         )

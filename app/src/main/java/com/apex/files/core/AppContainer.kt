@@ -6,9 +6,11 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.util.DebugLogger
 import com.apex.files.data.fs.ArchiveRepository
+import com.apex.files.data.fs.ConflictController
 import com.apex.files.data.fs.FsRepository
 import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.fs.MemoryIndex
+import com.apex.files.data.fs.SqliteRepository
 import com.apex.files.data.media.MediaStoreRepository
 import com.apex.files.data.storage.DrivesRepository
 import com.apex.files.tools.ApkScanner
@@ -27,9 +29,13 @@ class AppContainer(context: Context) {
     val appContext: Context = context.applicationContext
 
     val settings: SettingsRepository by lazy { SettingsRepository(appContext) }
+    /** Bridge between suspend file operations and the per-conflict dialog UI. */
+    val conflicts: ConflictController by lazy { ConflictController() }
     val fs: FsRepository by lazy { FsRepository(appContext) }
     val index: MemoryIndex by lazy { MemoryIndex() }
     val indexStore: IndexStore by lazy { IndexStore(appContext) }
+    /** Read-only SQLite analyzer (.db/.sqlite files). */
+    val sqlite: SqliteRepository by lazy { SqliteRepository(appContext, fs) }
     val recents: RecentStore by lazy { RecentStore(appContext) }
     val favorites: FavoritesStore by lazy { FavoritesStore(appContext) }
     val mediaStore: MediaStoreRepository by lazy { MediaStoreRepository(appContext) }

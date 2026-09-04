@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.model.Category
+import com.apex.files.data.model.FileNode
 import com.apex.files.data.storage.DrivesRepository
 import com.apex.files.data.storage.StorageStats
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val usedBytes: Long = 0L,
         val drives: List<DrivesRepository.Volume> = emptyList(),
         val categoryCounts: Map<Category, Int> = emptyMap(),
+        /** Smart suggestion: the largest files found in the local index. */
+        val largest: List<FileNode> = emptyList(),
         val indexing: Boolean = true,
         val indexingPath: String = "",
     )
@@ -68,6 +71,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             _state.update { it.copy(indexing = true) }
             val counts = HashMap<Category, Int>()
+            var topLarge: List<FileNode> = emptyList()
             withContext(Dispatchers.IO) {
                 ensureIndexLoaded(force)
                 // Media categories come from MediaStore (same source as the
@@ -81,8 +85,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                         counts.merge(cat, n, Int::plus)
                     }
                 }
+                // Top-3 largest files as instant “limpieza” suggestions.
+                topLarge = container.index.largestFiles(3, minBytes = 0L)
             }
-            _state.update { it.copy(categoryCounts = counts, indexing = false) }
+            _state.update {
+                it.copy(categoryCounts = counts, largest = topLarge, indexing = false)
+            }
         }
     }
 

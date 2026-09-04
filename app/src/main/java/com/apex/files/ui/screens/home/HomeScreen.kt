@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -76,6 +77,7 @@ fun HomeScreen() {
 
     fun openFavorite(node: FileNode) {
         if (node.isDir) {
+            container.recents.record(node)
             val location = node.uri?.let { Location.Saf(it, node.name) }
                 ?: Location.Fs(File(node.path))
             navigator.push(Screen.Explorer(location))
@@ -180,6 +182,14 @@ fun HomeScreen() {
                         }
                     }
                 }
+                // Full-width row: system log console.
+                ToolCard(
+                    icon = Icons.Outlined.BugReport,
+                    title = "Consola de sistema",
+                    subtitle = "Registro logcat del dispositivo",
+                    onClick = { navigator.push(Screen.Logcat) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
@@ -202,6 +212,24 @@ fun HomeScreen() {
                             "Tipos de archivo, tamaños y más grandes",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+
+        // ---- Smart suggestions: largest files ----
+        if (state.largest.isNotEmpty()) {
+            item { SectionLabel("Sugerencias") }
+            item {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    state.largest.forEach { node ->
+                        SuggestionRow(
+                            node = node,
+                            onClick = { openFavorite(node) },
                         )
                     }
                 }
@@ -339,6 +367,36 @@ private fun SectionLabel(text: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 20.dp, top = 22.dp, bottom = 10.dp),
     )
+}
+
+/** Suggestion row: one of the largest files, tappable to open it. */
+@Composable
+private fun SuggestionRow(
+    node: FileNode,
+    onClick: () -> Unit,
+) {
+    ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FileIcon(node.category, node.isDir, Modifier.size(24.dp), size = 20.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    node.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "${SizeFormatter.format(node.size)} · ${node.path.substringBeforeLast('/').ifBlank { "/" }}",
+                    style = MonoTextStyleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
 }
 
 @Composable

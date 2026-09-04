@@ -45,6 +45,7 @@ import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.ConfirmDialog
 import com.apex.files.ui.components.EmptyState
 import com.apex.files.ui.components.NeonProgressBar
+import com.apex.files.ui.components.RootPickerRow
 import com.apex.files.ui.theme.MonoTextStyleSmall
 
 @Composable
@@ -58,6 +59,15 @@ fun CleanerScreen() {
 
     Column(Modifier.fillMaxSize()) {
         ApexTopBar(title = "Limpiador Vacío", onBack = { navigator.pop() })
+
+        RootPickerRow(
+            currentName = state.rootName,
+            currentKey = state.rootKey,
+            volumes = state.volumes,
+            enabled = !state.scanning,
+            onPick = { vm.setRoot(it.key) },
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
 
         when {
             state.scanning -> {
@@ -168,11 +178,12 @@ fun CleanerScreen() {
             onConfirm = {
                 showConfirm = false
                 center.launch(OpType.DELETE, vm.deleteFlow()) { ok ->
-                    Toast.makeText(
-                        context,
-                        if (ok) "Operación completada" else "Operación cancelada",
-                        Toast.LENGTH_SHORT,
-                    ).show()
+                    val msg = if (ok) {
+                        vm.consumeDeleteSummary() ?: "Operación completada"
+                    } else {
+                        center.lastError.value ?: "Operación cancelada"
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     vm.scan()
                 }
             },

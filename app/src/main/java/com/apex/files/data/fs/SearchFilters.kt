@@ -136,6 +136,31 @@ class MemoryIndex {
         return counts
     }
 
+    /** The [n] largest indexed plain files (files of at least [minBytes]). */
+    fun largestFiles(n: Int, minBytes: Long = 0L): List<FileNode> {
+        val count = n.coerceIn(0, 32)
+        if (count == 0) return emptyList()
+        val out = ArrayList<FileNode>()
+        for (node in map.values) {
+            if (node.isDir || node.size < minBytes) continue
+            if (out.size < count) {
+                out.add(node)
+            } else {
+                // Cheap “top-n” keep: only replace when bigger than the smallest kept.
+                var minIdx = -1
+                var minSize = Long.MAX_VALUE
+                for (i in out.indices) {
+                    if (out[i].size < minSize) {
+                        minSize = out[i].size
+                        minIdx = i
+                    }
+                }
+                if (node.size > minSize) out[minIdx] = node
+            }
+        }
+        return out.sortedByDescending { it.size }
+    }
+
     /** Rebuilds the index from every volume root on [Dispatchers.IO]. */
     suspend fun rebuild(showHidden: Boolean) {
         clear()

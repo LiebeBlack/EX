@@ -50,6 +50,7 @@ fun PermissionScreen(
     val context = LocalContext.current
     val allFilesGranted = Permissions.allFilesGranted(context)
     val mediaGranted = Permissions.mediaGranted(context)
+    val mediaPartial = Permissions.hasPartialMediaAccess(context)
 
     val mediaLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -87,9 +88,13 @@ fun PermissionScreen(
             PermissionCard(
                 icon = Icons.Outlined.PhotoLibrary,
                 title = "Permisos de medios",
-                description = "Para las categorías Imágenes, Vídeos y Audio",
+                description = if (mediaPartial) {
+                    "Acceso parcial (fotos seleccionadas). Concede acceso completo para ver todas las categorías."
+                } else {
+                    "Para las categorías Imágenes, Vídeos y Audio"
+                },
                 granted = mediaGranted,
-                actionLabel = "Conceder",
+                actionLabel = if (mediaPartial) "Ampliar acceso" else "Conceder",
                 onAction = { mediaLauncher.launch(Permissions.mediaPermissions()) },
             )
             PermissionCard(

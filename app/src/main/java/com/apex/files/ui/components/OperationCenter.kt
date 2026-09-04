@@ -53,6 +53,10 @@ class OperationCenterViewModel : ViewModel() {
     private val _progress = MutableStateFlow<OpProgress?>(null)
     val progress: StateFlow<OpProgress?> = _progress.asStateFlow()
 
+    /** Last failure message of a finished operation (cleared on the next launch). */
+    private val _lastError = MutableStateFlow<String?>(null)
+    val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
     private var job: Job? = null
 
     /**
@@ -63,6 +67,7 @@ class OperationCenterViewModel : ViewModel() {
         if (_active.value) return
         _active.value = true
         _progress.value = OpProgress(type, currentName = "")
+        _lastError.value = null
         job = viewModelScope.launch {
             var completed = false
             try {
@@ -73,10 +78,12 @@ class OperationCenterViewModel : ViewModel() {
                 throw e
             } catch (e: Exception) {
                 completed = false
+                _lastError.value = e.message?.takeIf { it.isNotBlank() } ?: "Operación no completada"
             } finally {
                 _active.value = false
                 _progress.value = null
                 onDone(completed)
+                _lastError.value = null
             }
         }
     }

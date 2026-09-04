@@ -7,13 +7,13 @@ import com.apex.files.core.Accent
 
 import androidx.compose.ui.graphics.Color
 
-private fun apexColorScheme(accent: Accent) = darkColorScheme(
-    primary = accentColor(accent),
-    onPrimary = onAccentColor(accent),
+private fun apexColorScheme(accent: Accent, customHex: Long) = darkColorScheme(
+    primary = accentColor(accent, customHex),
+    onPrimary = onAccentColor(accent, customHex),
     secondary = ApexViolet,
     onSecondary = Color.White,
-    tertiary = accentColor(accent),
-    onTertiary = onAccentColor(accent),
+    tertiary = accentColor(accent, customHex),
+    onTertiary = onAccentColor(accent, customHex),
     error = ApexDanger,
     onError = Color.White,
     background = ApexBlack,
@@ -31,20 +31,24 @@ private fun apexColorScheme(accent: Accent) = darkColorScheme(
     surfaceContainerHighest = ApexContainerHighest,
     surfaceBright = ApexContainerHigh,
     surfaceDim = ApexBlack,
-    surfaceTint = accentColor(accent),
+    surfaceTint = accentColor(accent, customHex),
     inverseSurface = ApexTextPrimary,
     inverseOnSurface = ApexBlack,
-    inversePrimary = accentColor(accent),
+    inversePrimary = accentColor(accent, customHex),
 )
 
 /**
  * The single app theme: pitch-black OLED background, 1dp borders, dynamic
- * neon accent, and zero elevation everywhere.
+ * neon accent (preset or user color), and zero elevation everywhere.
  */
 @Composable
-fun ApexTheme(accent: Accent, content: @Composable () -> Unit) {
+fun ApexTheme(
+    accent: Accent,
+    customAccentHex: Long = Accent.CYAN.hex,
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(
-        colorScheme = apexColorScheme(accent),
+        colorScheme = apexColorScheme(accent, customAccentHex),
         typography = ApexTypography,
         shapes = ApexShapes,
         content = content,

@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apex.files.Navigator
 import com.apex.files.Screen
 import com.apex.files.core.AppContainer
+import com.apex.files.ui.components.ConflictDialog
 import com.apex.files.ui.components.OperationCenter
 import com.apex.files.ui.components.OperationCenterViewModel
 import com.apex.files.ui.screens.home.HomeScreen
@@ -34,9 +35,11 @@ import com.apex.files.ui.theme.ApexTheme
 fun ApexAppUi(container: AppContainer) {
     val settings = container.settings
     val accent by settings.accent.collectAsStateWithLifecycle()
+    val customAccentHex by settings.customAccent.collectAsStateWithLifecycle()
     val operationCenter: OperationCenterViewModel = viewModel()
+    val pendingConflict by container.conflicts.pending.collectAsStateWithLifecycle()
 
-    ApexTheme(accent = accent) {
+    ApexTheme(accent = accent, customAccentHex = customAccentHex) {
         CompositionLocalProvider(
             LocalContainer provides container,
             LocalOperationCenter provides operationCenter,
@@ -77,6 +80,12 @@ fun ApexAppUi(container: AppContainer) {
                         operationCenter,
                         Modifier.align(Alignment.BottomCenter),
                     )
+                    pendingConflict?.let { conflict ->
+                        ConflictDialog(
+                            conflict = conflict,
+                            onDecision = container.conflicts::answer,
+                        )
+                    }
                 }
             }
         }
@@ -105,5 +114,9 @@ fun NavHost(navigator: Navigator) {
         is Screen.TextViewer -> com.apex.files.ui.screens.viewer.TextViewerScreen(s.node)
         is Screen.PdfViewer -> com.apex.files.ui.screens.viewer.PdfViewerScreen(s.node)
         is Screen.ArchiveViewer -> com.apex.files.ui.screens.viewer.ArchiveViewerScreen(s.node)
+        is Screen.SqliteViewer -> com.apex.files.ui.screens.sqlite.SqliteScreen(s.node)
+        is Screen.Logcat -> com.apex.files.ui.screens.logcat.LogcatScreen()
+        is Screen.AudioPlayer -> com.apex.files.ui.screens.viewer.AudioPlayerScreen(s.nodes, s.index)
+        is Screen.About -> com.apex.files.ui.screens.about.AboutScreen()
     }
 }

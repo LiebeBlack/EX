@@ -39,15 +39,21 @@ APEX es un explorador de archivos tipo **CX File Explorer** con estética **Ultr
 ### 🏠 Dashboard
 - Cabecera premium **"APEX"** con `letterSpacing 3.sp`.
 - Tarjeta de **almacenamiento** con lectura real de `StatFs` (Usado / Total, GB).
-- Herramientas rápidas: **Limpiador Vacío**, **Buscador de Duplicados**, **Filtro APK**, **Analizador de espacio**.
+- Herramientas rápidas: **Limpiador Vacío**, **Buscador de Duplicados**, **Filtro APK**, **Analizador de espacio** y **Consola de sistema** (logcat).
 - Categorías físicas con recuento en vivo: Imágenes · Vídeos · Audio (MediaStore) y Documentos · Archivos (índice local).
 
 ### 🧭 Explorador de archivos
 - **Breadcrumb interactivo** (ruta con segmentos táctiles).
 - Vista **Lista ⇄ Cuadrícula** con `LazyColumn` / `LazyVerticalGrid` (sin jank).
 - Selección múltiple por toque largo: **Copiar · Mover · Renombrar · Eliminar · Compartir · Comprimir · Propiedades**.
+- **Selección por rango**: mantén pulsado sobre otro elemento para marcar el bloque completo.
 - **Centro de operaciones** flotante con progreso neón, **MB/s en tiempo real**, `N/Total` y **cancelación instantánea**.
-- **Inspector de propiedades**: SHA-256 / MD5 bajo demanda, conteo recursivo, permisos R/W/X, MIME exacto.
+- **Resultados honestos**: cada operación resume lo que ocurrió (omitidos, errores con motivo) en vez de fingir éxito.
+- **Conflictos de nombre resueltos uno a uno** (Sobrescribir / Omitir / Conservar ambos / Cancelar) al copiar, mover y extraer.
+- Orden **ascendente ⇄ descendente** persistido y acceso rápido a **archivos ocultos** desde la barra superior.
+- **Inspector de propiedades**: SHA-256 / MD5 bajo demanda, conteo recursivo, permisos R/W/X, MIME exacto, favorito y **“Abrir con…”**.
+- Protección anti-recursión: nunca se copia ni mueve una carpeta **dentro de sí misma**.
+- **Transferencias mixtas File ⇄ SAF**: pegar entre ambos mundos con progreso real y sin pérdida de datos.
 - Soporte **SAF** (USB-OTG / tarjetas) además del acceso total.
 
 ### 🧠 Motores 100% algorítmicos (locales)
@@ -61,13 +67,28 @@ APEX es un explorador de archivos tipo **CX File Explorer** con estética **Ultr
 |---|---|
 | Imagen (zoom, pan, **rotación**, doble toque) | `pointerInput` nativo + Coil |
 | Texto / logs (streaming, memoria acotada, auto-encoding) | `BufferedReader` |
+| Texto — **búsqueda en el archivo** (coincidencias resaltadas, saltos ↑/↓) | ventanas + scan secuencial |
+| **Audio** (reproductor OLED: play/pausa, seek, anterior/siguiente) | `android.media.MediaPlayer` (solo primer plano) |
 | PDF (páginas perezosas, caché LRU) | `android.graphics.pdf.PdfRenderer` |
-| **ZIP / TAR / GZ** (navegación virtual + extracción por entrada) | `java.util.zip` + lector TAR propio |
+| **ZIP / TAR / GZ** (navegación virtual + extracción por entrada o **“Extraer todo”**) | `java.util.zip` + lector TAR propio |
+| **SQLite** (.db/.sqlite): tablas y vistas, esquema, conteo, vista previa, **consola SQL de solo lectura** y **exportar CSV** (compartir) | `android.database.sqlite` + copia SAF a caché |
+| **XML / JSON** — botón **“Formatear”** (pretty-print validado) dentro del editor | parser propio sin dependencias |
+
+### 📦 Análisis profundo de APK
+- **Decodificador nativo de `AndroidManifest.xml` binario** (formato AXML: string pool UTF-8/16, namespaces, atributos tipados) sin `PackageManager`.
+- Datos extraídos: paquete, versión, SDK min/target/compile, debuggable, permisos, funciones y componentes (activity/service/receiver/provider) con nombres resueltos.
+- Contenedores **.xapk / .apks / .apkm**: re-parseo del APK base y listado de splits (al abrirlos, la app guía al Filtro APK).
+- **Icono del lanzador** extraído (PNG/WebP, mejor densidad) y **XML decodificado** navegable en pantalla.
+- **Consola de sistema (logcat)**: filtros por nivel y texto, lectura `logcat -d` (requiere READ_LOGS: builds de depuración o ADB).
 
 ### 🗺️ Y además
 - **Analizador de espacio** tipo *treemap squarified* dibujado en `Canvas` (toca para entrar).
-- **Ajustes**: archivos ocultos, acento neón (Cian / Violeta / Esmeralda / Ámbar) y **benchmark** de almacenamiento real.
+- **Sugerencias inteligentes** en Inicio: los archivos más grandes del índice con apertura directa, y carpetas recientes navegables.
+- **Ajustes**: archivos ocultos, orden por defecto, acento neón (presets o **paleta personalizada de 12 colores**) y **benchmark** de almacenamiento real.
+- **Pantalla “Acerca de”**: versión, garantías (cero red / cero IA / cero segundo plano) y estado de permisos.
+- Herramientas de limpieza con **ubicación de análisis seleccionable** (interno / SD / SAF) por herramienta.
 - **Búsqueda global** con filtros por tamaño, fecha y extensión (`*.apk`, `*.pdf`).
+- Android 14/15: soporte de **acceso parcial a fotos** (Select photos) con aviso y ampliación guiada.
 
 ## ⚡ Rendimiento
 
@@ -158,7 +179,7 @@ Tests puros JVM (sin emulador):
 ./gradlew testDebugUnitTest
 ```
 
-`CategoryEngineTest` · `SizeFormatterTest` · `DateFormatterTest` · `DuplicateFinderTest` · `TarReaderTest` · `TreemapLayoutTest` · `SearchFilterTest`
+`CategoryEngineTest` · `SizeFormatterTest` · `DateFormatterTest` · `DuplicateFinderTest` · `TarReaderTest` · `TreemapLayoutTest` · `SearchFilterTest` · `TransferGuardTest` · `SortersTest` · `OpResultTest` · `DuplicateAlgorithmTest` · `MemoryIndexTest` · `CategoryEngineCompoundTest`
 
 ## 🗂️ Estructura
 
@@ -170,7 +191,7 @@ Tests puros JVM (sin emulador):
    ├─ core/        AppContainer (DI manual), ajustes, hashing, progreso
    ├─ data/        modelo, FsRepository (router File/SAF), índice, regex, TAR, MediaStore…
    ├─ tools/       Limpiador, Duplicados (SHA-256), APK, Treemap, Benchmark
-   └─ ui/          tema OLED, componentes, 15 pantallas + ViewModels
+   └─ ui/          tema OLED, componentes, 18 pantallas + ViewModels
 ```
 
 ## 🛡️ Garantías

@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.core.OpType
 import com.apex.files.data.fs.SizeFormatter
+import com.apex.files.tools.DuplicateAlgorithm
 import com.apex.files.tools.DuplicateFinder
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.LocalOperationCenter
@@ -47,6 +48,7 @@ import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.ConfirmDialog
 import com.apex.files.ui.components.EmptyState
 import com.apex.files.ui.components.NeonProgressBar
+import com.apex.files.ui.components.RootPickerRow
 import com.apex.files.ui.theme.ApexDanger
 import com.apex.files.ui.theme.MonoTextStyleSmall
 
@@ -61,6 +63,15 @@ fun DuplicatesScreen() {
 
     Column(Modifier.fillMaxSize()) {
         ApexTopBar(title = "Buscador de Duplicados", onBack = { navigator.pop() })
+
+        RootPickerRow(
+            currentName = state.rootName,
+            currentKey = state.rootKey,
+            volumes = state.volumes,
+            enabled = !state.scanning,
+            onPick = { vm.setRoot(it.key) },
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
 
         when {
             state.scanning -> {
@@ -162,11 +173,12 @@ fun DuplicatesScreen() {
             onConfirm = {
                 showConfirm = false
                 center.launch(OpType.DELETE, vm.deleteFlow()) { ok ->
-                    Toast.makeText(
-                        context,
-                        if (ok) "Operación completada" else "Operación cancelada",
-                        Toast.LENGTH_SHORT,
-                    ).show()
+                    val msg = if (ok) {
+                        vm.consumeDeleteSummary() ?: "Operación completada"
+                    } else {
+                        center.lastError.value ?: "Operación cancelada"
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     vm.scan()
                 }
             },
@@ -218,7 +230,11 @@ private fun DuplicateGroupCard(
         }
         if (expanded) {
             Spacer(Modifier.height(6.dp))
-            group.files.forEachIndexed { i, file ->
+            // The keeper is the copy the smart “Seleccionar duplicados” keeps
+            // (newest). It is marked so the user knows what is protected.
+            val keeperPaths = group.files.map { it.path }.toSet() - DuplicateAlgorithm.filesToDelete(group.files).map { it.path }.toSet()
+            group.files.forEach { file ->
+                val isKeeper = file.path in keeperPaths
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -234,9 +250,9 @@ private fun DuplicateGroupCard(
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        if (i == 0) "★ ${file.path}" else file.path,
+                        if (isKeeper) "★ ${file.path}" else file.path,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (i == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                        color = if (isKeeper) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),

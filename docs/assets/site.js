@@ -42,6 +42,21 @@
 
   var VERSIONS = [
     {
+      tag: "v1.0.x",
+      what: "Revisión integral: seguridad de datos, conflictos y reproductor de audio",
+      date: "2026-09-04",
+      ref: "local · working tree",
+      body: [
+        "Protección anti-recursión al copiar/mover una carpeta dentro de sí misma, en acceso total y SAF.",
+        "Transferencias mixtas File ⇄ SAF y movimiento seguro: el origen solo se borra si la copia terminó sin errores.",
+        "Resolución interactiva de conflictos de nombre (sobrescribir / omitir / conservar ambos / cancelar) en copiar, mover y extraer, incluido “Extraer todo”.",
+        "Las operaciones informan resultados reales (archivos, omitidos y errores) y las selecciones de copiar/mover ya no se pierden al navegar al destino.",
+        "Nuevo reproductor de audio OLED en primer plano, búsqueda de texto dentro de los visores y sugerencias de archivos grandes en Inicio.",
+        "Orden ascendente/descendente persistido, selección por rango, acceso rápido a ocultos, “Abrir con…”, raíz seleccionable en herramientas y paleta de acento personalizada.",
+        "Nueva pantalla “Acerca de”, soporte del acceso parcial a fotos de Android 14+ y nuevos tests unitarios."
+      ]
+    },
+    {
       tag: "main",
       what: "Pipeline «Code Quality»",
       date: "2026-09-03",

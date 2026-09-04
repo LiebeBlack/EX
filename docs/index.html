@@ -76,28 +76,41 @@
       herramientas rápidas y recuentos por categoría: Imágenes, Vídeos y Audio desde
       <code>MediaStore</code>; Documentos y Archivos desde el índice local.</p>
     <p><strong>Favoritos y Recientes:</strong> las carpetas y archivos marcados con ★ desde las
-      propiedades se muestran para abrir con un toque, y cada archivo abierto se registra en un
-      historial local (máx. 20), persistido en los datos de la aplicación.</p>
+      propiedades se muestran para abrir con un toque, y cada carpeta o archivo abierto se
+      registra en un historial local (máx. 20), persistido en los datos de la aplicación.</p>
+    <p><strong>Sugerencias:</strong> tras indexar, Inicio muestra los archivos más grandes
+      encontrados con apertura directa desde la tarjeta.</p>
 
     <h3>Explorador</h3>
     <ul class="plain">
       <li>Ruta de migas (<em>breadcrumb</em>) interactiva.</li>
       <li>Vista lista ⇄ cuadrícula con <code>LazyColumn</code> / <code>LazyVerticalGrid</code>;
-        la elección de vista y el orden se <strong>recuerdan entre sesiones</strong>.</li>
-      <li>Selección múltiple: copiar, mover, renombrar, eliminar, compartir, comprimir, propiedades.</li>
-      <li>Centro de operaciones flotante con progreso, velocidad en MB/s, conteo y cancelación.</li>
-      <li>Propiedades: SHA-256 / MD5 bajo demanda, recuento recursivo, permisos y MIME, y
-        marcado de favoritos.</li>
+        la elección de vista, el orden y su <strong>dirección ascendente/descendente</strong> se
+        recuerdan entre sesiones.</li>
+      <li>Selección múltiple por toque largo con <strong>selección por rango</strong>, copiar,
+        mover, renombrar, eliminar, compartir, comprimir y propiedades.</li>
+      <li>Centro de operaciones flotante con progreso, velocidad en MB/s, conteo, cancelación y
+        <strong>resumen real</strong> al terminar (omitidos y errores incluidos).</li>
+      <li><strong>Conflictos de nombre</strong> resueltos uno a uno: sobrescribir, omitir,
+        conservar ambos o cancelar.</li>
+      <li>Propiedades: SHA-256 / MD5 bajo demanda, recuento recursivo, permisos y MIME,
+        favoritos y “Abrir con otra aplicación”.</li>
+      <li>Acceso rápido a <strong>archivos ocultos</strong> y protección para no copiar/mover
+        una carpeta dentro de sí misma.</li>
       <li>Acceso total (Android&nbsp;11+) y árboles <abbr title="Storage Access Framework">SAF</abbr>
-        (USB-OTG, tarjetas SD).</li>
+        (USB-OTG, tarjetas SD), incluida la transferencia File&nbsp;⇄&nbsp;SAF.</li>
     </ul>
 
     <h3>Visores</h3>
     <ul class="plain">
-      <li>Texto con detección de codificación, paginación por ventanas y
-        <strong>modo edición</strong> con guardado (archivos de hasta 2&nbsp;MB).</li>
+      <li>Texto con detección de codificación, paginación por ventanas, <strong>búsqueda en el
+        archivo</strong> con coincidencias resaltadas y modo edición con guardado
+        (hasta 2&nbsp;MB).</li>
       <li>Imagen a pantalla completa con zoom por gestos (pellizco, rotación, doble toque).</li>
-      <li>PDF y comprimidos (ZIP/TAR) con visor integrado y extracción.</li>
+      <li><strong>Reproductor de audio</strong> OLED (play/pausa, seek, anterior/siguiente) que
+        funciona solo en primer plano — sin servicios, sin batería en segundo plano.</li>
+      <li>PDF y comprimidos (ZIP/TAR) con visor integrado, extracción por entrada y
+        “Extraer todo”.</li>
     </ul>
 
     <h3>Motores locales</h3>
@@ -119,16 +132,24 @@
         <tr><td>Texto / registros — streaming y memoria acotada</td><td><code>BufferedReader</code></td></tr>
         <tr><td>PDF — páginas perezosas</td><td><code>PdfRenderer</code></td></tr>
         <tr><td>ZIP / TAR / GZ — navegación virtual</td><td><code>java.util.zip</code> + lector TAR propio</td></tr>
+        <tr><td>SQLite (.db/.sqlite) — esquema, vista previa, consola SQL de solo lectura y exportar CSV</td><td><code>android.database.sqlite</code></td></tr>
+        <tr><td>XML / JSON — “Formatear” (pretty-print validado) en el editor</td><td>parser propio</td></tr>
       </tbody>
     </table>
-    <p>El audio, el vídeo, los documentos de ofimática y el resto de formatos se entregan a la
+    <p>El vídeo, los documentos de ofimática y los formatos sin visor interno se entregan a la
       aplicación externa adecuada mediante <code>ACTION_VIEW</code> con su tipo MIME y permiso de
-      lectura temporal.</p>
+      lectura temporal; “Abrir con…” fuerza siempre ese selector.</p>
 
     <h3>Análisis y herramientas</h3>
     <p>Analizador de espacio en <em>treemap squarified</em> dibujado en <code>Canvas</code>,
-      limpiador de carpetas vacías, buscador de duplicados, filtro de APK y benchmark de
-      almacenamiento con lectura real de volumen.</p>
+      limpiador de carpetas vacías, buscador de duplicados (con selección inteligente que
+      conserva la copia más reciente), filtro de APK y benchmark de almacenamiento con lectura
+      real de volumen. El limpiador, el buscador y el filtro permiten <strong>elegir la
+      ubicación de análisis</strong> (interno, tarjeta SD o árbol SAF).</p>
+    <p><strong>Análisis profundo de APK:</strong> decodificador nativo del
+      <code>AndroidManifest.xml</code> binario (formato AXML), contenedores .xapk/.apks/.apkm,
+      extracción de icono y XML decodificado navegable — todo sin <code>PackageManager</code>.
+      <strong>Consola de sistema (logcat)</strong> con filtros por nivel y texto.</p>
   </section>
 
   <section id="tecnologia" class="section">

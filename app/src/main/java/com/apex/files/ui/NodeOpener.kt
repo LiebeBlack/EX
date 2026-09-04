@@ -8,6 +8,7 @@ import com.apex.files.core.AppContainer
 import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
+import com.apex.files.tools.ApkManifestDecoder
 
 /**
  * Single file-opening policy shared by Explorer, Search and Category screens.
@@ -44,9 +45,25 @@ object NodeOpener {
                 val index = images.indexOfFirst { it.path == node.path }.coerceAtLeast(0)
                 navigator.push(Screen.ImageViewer(images, index))
             }
+            // SQLite databases (.db/.sqlite/.sqlite3/…) open in the analyzer.
+            (node.extension in container.sqlite.SQLITE_EXTS && !node.isDir) ->
+                navigator.push(Screen.SqliteViewer(node))
+            // Multi-APK containers have no direct installer; point the user
+            // at the deep-analysis tool instead of a broken ACTION_VIEW.
+            (ApkManifestDecoder.isContainer(node.name) && !node.isDir) ->
+                onUnavailable("Contenedor .${node.extension}: analízalo desde la herramienta Filtro APK")
             FileKinds.isText(node) -> navigator.push(Screen.TextViewer(node))
             node.extension == "pdf" -> navigator.push(Screen.PdfViewer(node))
             container.archive.isSupported(node) -> navigator.push(Screen.ArchiveViewer(node))
+            node.category == Category.AUDIO -> {
+                // In-app player with the surrounding tracks from the folder /
+                // search / category the file was opened from (imageContext is
+                // the generic “surrounding nodes” of the caller).
+                val tracks = if (imageContext.isEmpty()) listOf(node)
+                else imageContext.filter { it.category == Category.AUDIO && !it.isDir }
+                val idx = tracks.indexOfFirst { it.path == node.path }.coerceAtLeast(0)
+                navigator.push(Screen.AudioPlayer(tracks, idx))
+            }
             node.category == Category.APK -> launchExternal(
                 node = node,
                 container = container,

@@ -39,7 +39,6 @@ class RecentStore(context: Context) {
 
     /** Moves [node] to the top of the history (deduplicated by path). */
     fun record(node: FileNode) {
-        if (node.isDir) return
         val updated = buildList {
             add(RecentEntry(node, System.currentTimeMillis()))
             for (e in _items.value) {
@@ -82,6 +81,7 @@ class RecentStore(context: Context) {
                 JSONObject()
                     .put("p", e.node.path)
                     .put("n", e.node.name)
+                    .put("d", e.node.isDir)
                     .put("s", e.node.size)
                     .put("m", e.node.lastModified)
                     .put("t", e.openedAt)
@@ -102,18 +102,28 @@ class RecentStore(context: Context) {
                 val name = o.optString("n")
                 if (path.isEmpty() || name.isEmpty()) continue
                 val uri = o.optString("u").takeIf { it.isNotEmpty() }?.let(android.net.Uri::parse)
+                val isDir = o.optBoolean("d", false)
                 out.add(
                     RecentEntry(
-                        node = FileNode(
-                            name = name,
-                            path = path,
-                            isDir = false,
-                            size = o.optLong("s", 0L).coerceAtLeast(0L),
-                            lastModified = o.optLong("m", 0L),
-                            extension = CategoryEngine.extensionOf(name),
-                            category = CategoryEngine.classify(name),
-                            uri = uri,
-                        ),
+                        node = if (isDir) {
+                            FileNode.forDirectory(
+                                name = name,
+                                path = path,
+                                lastModified = o.optLong("m", 0L),
+                                uri = uri,
+                            )
+                        } else {
+                            FileNode(
+                                name = name,
+                                path = path,
+                                isDir = false,
+                                size = o.optLong("s", 0L).coerceAtLeast(0L),
+                                lastModified = o.optLong("m", 0L),
+                                extension = CategoryEngine.extensionOf(name),
+                                category = CategoryEngine.classify(name),
+                                uri = uri,
+                            )
+                        },
                         openedAt = o.optLong("t", 0L),
                     )
                 )

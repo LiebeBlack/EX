@@ -31,6 +31,10 @@ data class ArchiveEntry(
  * [TarReader] over (optionally gzipped) streams, .gz as single-stream
  * decompression. Entries are listed virtually; extraction streams only the
  * requested entries to disk — the whole archive is never unpacked.
+ *
+ * Extraction reports an honest [OpResult] and pauses on destination
+ * collisions through [onConflict] (default keeps the historical
+ * overwrite-when-no-callback behavior).
  */
 class ArchiveRepository(private val context: Context, private val fs: FsRepository) {
 
@@ -76,18 +80,20 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         archiveNode: FileNode,
         destDir: FileNode,
         onProgress: suspend (OpProgress) -> Unit,
-    ) = withContext(Dispatchers.IO) {
+        onConflict: (suspend (Conflict) -> ConflictDecision)? = null,
+    ): OpResult = withContext(Dispatchers.IO) {
         require(destDir.uri == null) { "La extracción a SAF aún no está soportada" }
         val base = File(destDir.path)
         val ext = extensionOf(archiveNode.name)
         val sink = ProgressSink(onProgress)
+        val acc = OpAccumulator()
         when (ext) {
             "zip", "jar", "cbz" -> {
                 ZipFile(fs.fileForReading(archiveNode)).use { zip ->
                     if (entry.isDir) {
                         val prefix = entry.name.trimEnd('/') + "/"
                         val target = File(base, safeName(entry.name))
-                        target.mkdirs()
+                        if (!target.exists() && !target.mkdirs()) acc.error("No se pudo crear la carpeta ${entry.name}")
                         val e = zip.entries()
                         while (e.hasMoreElements()) {
                             kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -98,19 +104,16 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
                             if (ze.isDirectory) {
                                 File(target, safeName(rel)).mkdirs()
                             } else {
-                                copyEntry(zip.getInputStream(ze), File(target, safeName(rel)), ze.size, sink, ze.name)
+                                val dest = resolveWriteTarget(File(target, safeName(rel)), ze.name, acc, onConflict) ?: continue
+                                copyEntry(zip.getInputStream(ze), dest, ze.size, sink, ze.name, acc)
                             }
                         }
                     } else {
                         val zipEntry = zip.getEntry(entry.name)
                             ?: throw IOException("Entrada no encontrada: ${entry.name}")
-                        copyEntry(
-                            zip.getInputStream(zipEntry),
-                            File(base, safeName(entry.name)),
-                            entry.size,
-                            sink,
-                            entry.name,
-                        )
+                        val dest = resolveWriteTarget(File(base, safeName(entry.name)), entry.name, acc, onConflict)
+                            ?: return@withContext acc.result()
+                        copyEntry(zip.getInputStream(zipEntry), dest, entry.size, sink, entry.name, acc)
                     }
                 }
             }
@@ -131,13 +134,17 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
                         if (name == prefix) {
                             found = true
                             if (tarEntry.isDir) File(base, safeName(name)).mkdirs()
-                            else if (stream != null) copyEntry(stream, File(base, safeName(name)), tarEntry.size, sink, name)
+                            else if (stream != null) {
+                                val dest = resolveWriteTarget(File(base, safeName(name)), name, acc, onConflict) ?: return@forEachEntry
+                                copyEntry(stream, dest, tarEntry.size, sink, name, acc)
+                            }
                         } else if (entry.isDir && name.startsWith(prefix + "/")) {
                             found = true
                             if (tarEntry.isDir) {
                                 File(base, safeName(name)).mkdirs()
                             } else if (stream != null) {
-                                copyEntry(stream, File(base, safeName(name)), tarEntry.size, sink, name)
+                                val dest = resolveWriteTarget(File(base, safeName(name)), name, acc, onConflict) ?: return@forEachEntry
+                                copyEntry(stream, dest, tarEntry.size, sink, name, acc)
                             }
                         }
                     }
@@ -147,31 +154,112 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
             "gz" -> {
                 GZIPInputStream(BufferedInputStream(FileInputStream(fs.fileForReading(archiveNode)), 64 * 1024)).use { gz ->
                     val outName = archiveNode.name.removeSuffix(".gz").ifBlank { "extraido" }
-                    copyEntry(gz, File(base, outName), -1L, sink, outName)
+                    val dest = resolveWriteTarget(File(base, outName), outName, acc, onConflict) ?: return@withContext acc.result()
+                    copyEntry(gz, dest, -1L, sink, outName, acc)
                 }
             }
             else -> throw IOException("Formato de archivo no soportado")
         }
+        acc.result()
     }
 
-    private suspend fun copyEntry(input: java.io.InputStream, dest: File, size: Long, sink: ProgressSink, name: String) {
+    /**
+     * Extracts the whole archive into [destDir]. Top-level entries are
+     * extracted one by one (directories stream their full subtree in a
+     * single pass); conflicts resolve through [onConflict].
+     */
+    suspend fun extractAll(
+        archiveNode: FileNode,
+        destDir: FileNode,
+        onProgress: suspend (OpProgress) -> Unit,
+        onConflict: (suspend (Conflict) -> ConflictDecision)? = null,
+    ): OpResult = withContext(Dispatchers.IO) {
+        require(destDir.uri == null) { "La extracción a SAF aún no está soportada" }
+        val acc = OpAccumulator()
+        open(archiveNode).use { handle ->
+            val entries = handle.entries()
+            val topLevel = entries.filter { it.isDir || !it.name.contains('/') }
+            for (entry in topLevel) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                acc += extract(entry, archiveNode, destDir, onProgress, onConflict)
+            }
+        }
+        acc.result()
+    }
+
+    /**
+     * When the destination file already exists: without a resolver the
+     * historical overwrite behavior applies; with one the user decides
+     * (skip / overwrite / keep both / cancel the whole operation).
+     */
+    private suspend fun resolveWriteTarget(
+        dest: File,
+        displayName: String,
+        acc: OpAccumulator,
+        onConflict: (suspend (Conflict) -> ConflictDecision)?,
+    ): File? {
+        if (!dest.exists()) return dest
+        val parent = dest.parentFile
+        val decision = onConflict?.invoke(
+            Conflict(dest.name, parent?.absolutePath ?: "", isDir = false, existingSize = dest.length(), existingModified = dest.lastModified())
+        ) ?: ConflictDecision.OVERWRITE
+        return when (decision) {
+            ConflictDecision.OVERWRITE -> dest
+            ConflictDecision.SKIP -> {
+                acc.skipped++
+                null
+            }
+            ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
+            ConflictDecision.KEEP_BOTH -> uniqueSibling(parent ?: dest.parentFile, dest.name)
+        }
+    }
+
+    private fun uniqueSibling(dir: File, name: String): File {
+        var candidate = File(dir, name)
+        if (!candidate.exists()) return candidate
+        val dot = name.lastIndexOf('.')
+        val base = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        var i = 1
+        do {
+            candidate = File(dir, "$base ($i)$ext")
+            i++
+        } while (candidate.exists())
+        return candidate
+    }
+
+    private suspend fun copyEntry(
+        input: java.io.InputStream,
+        dest: File,
+        size: Long,
+        sink: ProgressSink,
+        name: String,
+        acc: OpAccumulator,
+    ) {
         dest.parentFile?.mkdirs()
         val buffer = ByteArray(64 * 1024)
         var done = 0L
-        input.use { src ->
-            FileOutputStream(dest).use { out ->
-                while (true) {
-                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    val read = src.read(buffer)
-                    if (read < 0) break
-                    if (read > 0) {
-                        out.write(buffer, 0, read)
-                        done += read
-                        sink.emit(done, if (size > 0) size else null, 1, null, name)
+        try {
+            input.use { src ->
+                FileOutputStream(dest).use { out ->
+                    while (true) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        val read = src.read(buffer)
+                        if (read < 0) break
+                        if (read > 0) {
+                            out.write(buffer, 0, read)
+                            done += read
+                            sink.emit(done, if (size > 0) size else null, 1, null, name)
+                        }
                     }
+                    out.flush()
                 }
-                out.flush()
             }
+            acc.bytes += done
+            acc.files++
+        } catch (e: Exception) {
+            acc.error("Error extrayendo $name: ${e.message.orEmpty()}")
+            runCatching { dest.delete() }
         }
     }
 
