@@ -35,21 +35,50 @@ object RelativeDateParser {
     )
 
     fun parse(raw: String): Parsed {
-        var q = " ${raw.lowercase()} ".replace(Regex("\\s+"), " ")
+        val tokens = raw.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
         var dateRange: SearchFilters.DateRange? = null
+        var sizeBand: SearchFilters.SizeBand? = null
+        var out = tokens
         for ((phrases, range) in DATE_PHRASES) {
-            val matched = phrases.firstOrNull { q.contains(it) } ?: continue
-            q = q.replace(matched, " ")
+            val match = findPhrase(out, phrases) ?: continue
+            out = removeWithPrecedingConnectors(out, match)
             dateRange = range
             break
         }
-        var sizeBand: SearchFilters.SizeBand? = null
         for ((phrases, band) in SIZE_PHRASES) {
-            val matched = phrases.firstOrNull { q.contains(it) } ?: continue
-            q = q.replace(matched, " ")
+            val match = findPhrase(out, phrases) ?: continue
+            out = removeWithPrecedingConnectors(out, match)
             sizeBand = band
             break
         }
-        return Parsed(q.trim(), dateRange, sizeBand)
+        return Parsed(out.joinToString(" "), dateRange, sizeBand)
+    }
+
+    /** Function words that link a noun to its modifier phrase ("facturas DEL
+     *  mes pasado"); dropped together with the matched phrase. */
+    private val CONNECTORS = setOf("de", "del", "la", "el", "los", "las", "al", "a", "un", "una", "muy")
+
+    private data class PhraseMatch(val start: Int, val endExclusive: Int)
+
+    private fun findPhrase(tokens: List<String>, phrases: List<String>): PhraseMatch? {
+        for (phrase in phrases) {
+            val words = phrase.split(' ')
+            if (words.size > tokens.size) continue
+            outer@ for (i in 0..tokens.size - words.size) {
+                for (j in words.indices) {
+                    if (tokens[i + j] != words[j]) continue@outer
+                }
+                return PhraseMatch(i, i + words.size)
+            }
+        }
+        return null
+    }
+
+    /** Removes the matched phrase and any connector words hanging right
+     *  before it ("facturas del mes pasado" -> "facturas"). */
+    private fun removeWithPrecedingConnectors(tokens: List<String>, match: PhraseMatch): List<String> {
+        var start = match.start
+        while (start > 0 && tokens[start - 1] in CONNECTORS) start--
+        return tokens.subList(0, start) + tokens.subList(match.endExclusive, tokens.size)
     }
 }
