@@ -17,11 +17,11 @@ object SemanticSearch {
     private const val CANDIDATE_CAP = 60_000
 
     /**
-     * @param textOf content text provider for a node path ("" when not indexed)
+     * @param textOf content text provider by path ("" when not indexed)
      */
     fun search(
         index: MemoryIndex,
-        textOf: (FileNode) -> String,
+        textOf: (String) -> String,
         query: String,
         sizeBand: SearchFilters.SizeBand? = null,
         dateRange: SearchFilters.DateRange? = null,

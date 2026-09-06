@@ -3,6 +3,7 @@ package com.apex.files.data.media
 import android.content.Context
 import android.content.ContentUris
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
@@ -22,6 +23,13 @@ class MediaStoreRepository(private val context: Context) {
         Category.IMAGE -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         Category.VIDEO -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         Category.AUDIO -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        // Downloads collection exists since API 29; below that the category is
+        // served by the File-backed index instead.
+        Category.DOWNLOADS -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else {
+            null
+        }
         else -> null
     }
 

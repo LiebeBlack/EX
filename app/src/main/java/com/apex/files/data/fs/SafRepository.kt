@@ -121,7 +121,7 @@ class SafRepository(private val context: Context) {
                 if (!doc.delete() && acc.files > 0) acc.error("No se pudo eliminar la carpeta ${doc.name.orEmpty()}")
             } else {
                 if (doc.delete()) {
-                    acc.files++
+                    acc.addFiles()
                     sink.emit(1L, null, acc.files, total, doc.name ?: "")
                 } else {
                     acc.error("No se pudo eliminar ${doc.name.orEmpty()}")
@@ -130,7 +130,7 @@ class SafRepository(private val context: Context) {
         } catch (e: Exception) {
             acc.error("No se pudo eliminar ${doc.name.orEmpty()}: ${e.message.orEmpty()}")
             try {
-                if (doc.delete()) acc.files++
+                if (doc.delete()) acc.addFiles()
             } catch (ignored: Exception) {
             }
         }
@@ -212,7 +212,7 @@ class SafRepository(private val context: Context) {
         return when (decision) {
             ConflictDecision.OVERWRITE -> existing
             ConflictDecision.SKIP -> {
-                acc.skipped++
+                acc.addSkipped()
                 null
             }
             ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -258,7 +258,7 @@ class SafRepository(private val context: Context) {
                 }
             }
             ConflictDecision.SKIP -> {
-                acc.skipped++
+                acc.addSkipped()
                 null
             }
             ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -466,8 +466,8 @@ class SafRepository(private val context: Context) {
                     output.flush()
                 }
             }
-            acc.bytes += done
-            acc.files++
+            acc.addBytes(done)
+            acc.addFiles()
         } catch (e: Exception) {
             acc.error("Error copiando $name: ${e.message.orEmpty()}")
         }
@@ -486,6 +486,7 @@ class SafRepository(private val context: Context) {
     ) {
         private val tracker = SpeedTracker()
         private var lastEmitAt = 0L
+        @Synchronized
         suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             // Throttle UI updates to ~10 Hz; a big copy otherwise pushes one
             // progress event per 64 KB chunk (tens of thousands of frames).
@@ -505,20 +506,45 @@ data class CountResult(val files: Int, val dirs: Int)
 /**
  * Mutable accumulator feeding an [OpResult]; lets recursion count bytes,
  * files and errors without copying immutable data classes on every hop.
+ *
+ * Thread-safe: the parallel copy path feeds it from several workers, so every
+ * mutation is synchronized.
  */
 internal class OpAccumulator {
     var bytes: Long = 0L
+        private set
     var files: Int = 0
+        private set
     var errors: Int = 0
+        private set
     var firstError: String? = null
+        private set
     var skipped: Int = 0
+        private set
 
+    @Synchronized
+    fun addBytes(n: Long) {
+        bytes += n
+    }
+
+    @Synchronized
+    fun addFiles(n: Int = 1) {
+        files += n
+    }
+
+    @Synchronized
+    fun addSkipped() {
+        skipped++
+    }
+
+    @Synchronized
     fun error(message: String) {
         errors++
         if (firstError == null) firstError = message
     }
 
     /** Folds another operation result into this accumulator. */
+    @Synchronized
     operator fun plusAssign(other: OpResult) {
         bytes += other.bytesDone
         files += other.filesDone
@@ -527,6 +553,7 @@ internal class OpAccumulator {
         if (firstError == null) firstError = other.firstError
     }
 
+    @Synchronized
     fun result(): OpResult = OpResult(
         bytesDone = bytes,
         filesDone = files,

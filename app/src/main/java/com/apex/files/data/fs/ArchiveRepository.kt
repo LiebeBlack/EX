@@ -215,7 +215,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         return when (decision) {
             ConflictDecision.OVERWRITE -> dest
             ConflictDecision.SKIP -> {
-                acc.skipped++
+                acc.addSkipped()
                 null
             }
             ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -264,8 +264,8 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
                     out.flush()
                 }
             }
-            acc.bytes += done
-            acc.files++
+            acc.addBytes(done)
+            acc.addFiles()
         } catch (e: Exception) {
             acc.error("Error extrayendo $name: ${e.message.orEmpty()}")
             runCatching { dest.delete() }

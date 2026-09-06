@@ -165,7 +165,7 @@ class TrashManager(
             for (c in file.listFiles() ?: return) deleteRecursive(c, acc)
             if (!file.delete() && acc.files > 0) acc.error("No se pudo eliminar ${file.name}")
         } else {
-            if (file.delete()) acc.files++ else acc.error("No se pudo eliminar ${file.name}")
+            if (file.delete()) acc.addFiles() else acc.error("No se pudo eliminar ${file.name}")
         }
     }
 

@@ -17,13 +17,14 @@ object Bm25Ranker {
 
     /**
      * @param docs candidate nodes (already hard-filtered by size/date/etc.)
-     * @param textOf content text provider (indexed OCR / PDF / plain text)
+     * @param textOf content text provider by path (indexed OCR / PDF / plain
+     *   text, normalized; "" when a file is not indexed)
      * @param terms expanded query terms with weights (from [SynonymExpander])
      * @return the top [limit] nodes ordered by descending score
      */
     fun score(
         docs: List<FileNode>,
-        textOf: (FileNode) -> String,
+        textOf: (String) -> String,
         terms: Map<String, Double>,
         limit: Int,
     ): List<FileNode> {
@@ -38,7 +39,7 @@ object Bm25Ranker {
         for (node in docs) {
             val nameTokens = SpanishNormalizer.tokens(node.name)
             val metaTokens = SpanishNormalizer.tokens("${node.extension} ${node.category.name}")
-            val contentTokens = SpanishNormalizer.tokens(textOf(node))
+            val contentTokens = SpanishNormalizer.tokens(textOf(node.path))
             val all = ArrayList<String>(nameTokens.size * 2 + metaTokens.size + contentTokens.size)
             all.addAll(nameTokens)
             all.addAll(nameTokens) // name boost

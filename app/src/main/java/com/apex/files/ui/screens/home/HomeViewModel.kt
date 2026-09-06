@@ -103,6 +103,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                     counts[Category.IMAGE] = container.mediaStore.count(Category.IMAGE)
                     counts[Category.VIDEO] = container.mediaStore.count(Category.VIDEO)
                     counts[Category.AUDIO] = container.mediaStore.count(Category.AUDIO)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        counts[Category.DOWNLOADS] = container.mediaStore.count(Category.DOWNLOADS)
+                    }
                     container.index.countByCategory().forEach { (cat, n) ->
                         if (cat == Category.DOCUMENT || cat == Category.ARCHIVE) {
                             counts.merge(cat, n, Int::plus)

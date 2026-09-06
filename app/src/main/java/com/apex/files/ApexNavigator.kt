@@ -42,6 +42,10 @@ sealed class Screen {
     data class BatchRename(val nodes: List<FileNode>, override val serial: Int = 0) : Screen()
     /** Built-in hexadecimal viewer for any file. */
     data class HexViewer(val node: FileNode, override val serial: Int = 0) : Screen()
+    /** Virtual content folders (Comprobantes, Trabajo, Código…). */
+    data object SmartGroups : Screen()
+    /** Junk analysis: orphan app dirs, caches and temp files. */
+    data object Cleanup : Screen()
 }
 
 /**
@@ -99,5 +103,7 @@ class Navigator(initial: Screen = Screen.Home) {
         is Screen.Trash -> screen
         is Screen.BatchRename -> screen.copy(serial = n)
         is Screen.HexViewer -> screen.copy(serial = n)
+        is Screen.SmartGroups -> screen
+        is Screen.Cleanup -> screen
     }
 }

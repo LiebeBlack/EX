@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
@@ -37,6 +38,7 @@ fun FileIcon(
         category == Category.DOCUMENT -> Icons.Outlined.Description
         category == Category.ARCHIVE -> Icons.Outlined.FolderZip
         category == Category.APK -> Icons.Outlined.Android
+        category == Category.DOWNLOADS -> Icons.Outlined.Download
         else -> Icons.AutoMirrored.Outlined.InsertDriveFile
     }
     val effectiveTint = when (category) {

@@ -124,5 +124,7 @@ fun NavHost(navigator: Navigator) {
         is Screen.Trash -> com.apex.files.ui.screens.trash.TrashScreen()
         is Screen.BatchRename -> com.apex.files.ui.screens.rename.BatchRenameScreen(s.nodes)
         is Screen.HexViewer -> com.apex.files.ui.screens.viewer.HexViewerScreen(s.node)
+        is Screen.SmartGroups -> com.apex.files.ui.screens.smart.SmartGroupsScreen()
+        is Screen.Cleanup -> com.apex.files.ui.screens.cleanup.CleanupScreen()
     }
 }

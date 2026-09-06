@@ -21,12 +21,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Broom
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
@@ -91,6 +94,7 @@ fun HomeScreen() {
     val state by vm.state.collectAsStateWithLifecycle()
     val favorites by container.favorites.items.collectAsStateWithLifecycle()
     val recents by container.recents.items.collectAsStateWithLifecycle()
+    val semanticEnabled by container.settings.semanticSearchEnabled.collectAsStateWithLifecycle()
 
     // First run: show the welcome tour once (replayable from Ajustes).
     val onboarding = container.onboarding
@@ -203,14 +207,22 @@ fun HomeScreen() {
         // ---- Quick tools ----
         item { SectionLabel("Herramientas") }
         item {
-            val tools = remember { listOf(
-                ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Carpetas vacías") { navigator.push(Screen.Cleaner) },
-                ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) },
-                ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) },
-                ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
+            val tools = buildList {
+                add(ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Carpetas vacías") { navigator.push(Screen.Cleaner) })
+                add(ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) })
+                add(ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) })
+                add(ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
                     navigator.push(Screen.SpaceAnalyzer(Location.Fs(Paths.internalRoot())))
-                },
-            ) }
+                })
+                if (semanticEnabled) {
+                    add(ToolSpec(Icons.Outlined.AutoAwesome, "Carpetas inteligentes", "Grupos por contenido") {
+                        navigator.push(Screen.SmartGroups)
+                    })
+                    add(ToolSpec(Icons.Outlined.Broom, "Limpieza Inteligente", "Residuos y cachés") {
+                        navigator.push(Screen.Cleanup)
+                    })
+                }
+            }
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -250,13 +262,16 @@ fun HomeScreen() {
         item { SectionLabel("Categorías") }
         item {
             val columns = ((LocalConfiguration.current.screenWidthDp - 42) / 104).coerceIn(2, 6)
-            val entries = listOf(
-                Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"),
-                Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"),
-                Triple(Category.AUDIO, Icons.Outlined.Audiotrack, "Audio"),
-                Triple(Category.DOCUMENT, Icons.Outlined.Description, "Documentos"),
-                Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"),
-            )
+            val entries = buildList {
+                add(Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"))
+                add(Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"))
+                add(Triple(Category.AUDIO, Icons.Outlined.Audiotrack, "Audio"))
+                add(Triple(Category.DOCUMENT, Icons.Outlined.Description, "Documentos"))
+                add(Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"))
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    add(Triple(Category.DOWNLOADS, Icons.Outlined.Download, "Descargas"))
+                }
+            }
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),

@@ -1,6 +1,7 @@
 package com.apex.files.data.fs
 
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.SystemClock
 import androidx.core.content.FileProvider
@@ -21,8 +22,12 @@ import java.nio.charset.Charset
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 /**
@@ -36,6 +41,11 @@ import kotlinx.coroutines.withContext
  *  - pause on destination collisions through [onConflict] when provided.
  */
 class FsRepository(private val context: Context) {
+
+    companion object {
+        /** Concurrent workers for the parallel file copy path. */
+        const val COPY_WORKERS = 4
+    }
 
     private val saf = SafRepository(context)
     private val resolver get() = context.contentResolver
@@ -119,7 +129,7 @@ class FsRepository(private val context: Context) {
             }
         } else {
             if (file.delete()) {
-                acc.files++
+                acc.addFiles()
                 sink.emit(1L, null, acc.files, total, file.name)
             } else {
                 acc.error("No se pudo eliminar ${file.name}")
@@ -192,6 +202,9 @@ class FsRepository(private val context: Context) {
         val sink = ProgressSink(OpType.COPY, onProgress)
         val acc = OpAccumulator()
         copyRecursive(srcFile, File(destDir.path), sink, totalBytes, acc, onConflict)
+        // New files on plain storage are invisible to MediaStore until a
+        // rescan; notify it so Galería/Descargas see the result instantly.
+        rescan(File(destDir.path).absolutePath)
         return acc.result()
     }
 
@@ -207,10 +220,53 @@ class FsRepository(private val context: Context) {
         if (src.isDirectory && !Paths.isSymlink(src)) {
             val dest = createOrResolveDir(destDir, src.name, acc, onConflict) ?: return
             val children = src.listFiles() ?: return
-            for (c in children) copyRecursive(c, dest, sink, total, acc, onConflict)
+            val dirs = ArrayList<File>()
+            val files = ArrayList<File>()
+            for (c in children) {
+                if (c.isDirectory && !Paths.isSymlink(c)) dirs.add(c)
+                else if (c.isFile) files.add(c)
+            }
+            // Subdirectories stay sequential (deterministic conflict ordering);
+            // the plain files of this level copy in parallel for throughput.
+            for (d in dirs) copyRecursive(d, dest, sink, total, acc, onConflict)
+            copyFilesParallel(files, dest, sink, total, acc, onConflict)
         } else {
             val dest = resolveDest(destDir, src.name, acc, onConflict) ?: return
             copyFile(src, dest, sink, total, acc)
+        }
+    }
+
+    /**
+     * Copies [files] into [destDir] with up to [COPY_WORKERS] workers. The
+     * accumulator and progress sink are thread-safe; conflict resolution stays
+     * serialized through [ConflictController] (a busy dialog answers with
+     * KEEP_BOTH, so parallel collisions degrade gracefully).
+     */
+    private suspend fun copyFilesParallel(
+        files: List<File>,
+        destDir: File,
+        sink: ProgressSink,
+        total: Long,
+        acc: OpAccumulator,
+        onConflict: (suspend (Conflict) -> ConflictDecision)?,
+    ) {
+        if (files.isEmpty()) return
+        if (files.size == 1) {
+            val dest = resolveDest(destDir, files[0].name, acc, onConflict) ?: return
+            copyFile(files[0], dest, sink, total, acc)
+            return
+        }
+        val semaphore = Semaphore(COPY_WORKERS)
+        coroutineScope {
+            for (src in files) {
+                launch {
+                    semaphore.withPermit {
+                        currentCoroutineContext().ensureActive()
+                        val dest = resolveDest(destDir, src.name, acc, onConflict) ?: return@withPermit
+                        copyFile(src, dest, sink, total, acc)
+                    }
+                }
+            }
         }
     }
 
@@ -235,7 +291,7 @@ class FsRepository(private val context: Context) {
         return when (decision) {
             ConflictDecision.OVERWRITE -> target
             ConflictDecision.SKIP -> {
-                acc.skipped++
+                acc.addSkipped()
                 null
             }
             ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -261,7 +317,7 @@ class FsRepository(private val context: Context) {
         return when (decision) {
             ConflictDecision.OVERWRITE -> target // FileOutputStream truncates in place.
             ConflictDecision.SKIP -> {
-                acc.skipped++
+                acc.addSkipped()
                 null
             }
             ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -289,8 +345,8 @@ class FsRepository(private val context: Context) {
                     output.flush()
                 }
             }
-            acc.bytes += done
-            acc.files++
+            acc.addBytes(done)
+            acc.addFiles()
         } catch (e: Exception) {
             acc.error("Error copiando ${src.name}: ${e.message.orEmpty()}")
             runCatching { dest.delete() }
@@ -362,6 +418,7 @@ class FsRepository(private val context: Context) {
         } else {
             acc.error("La copia no se completó; el origen no se eliminó")
         }
+        rescan(destBase.absolutePath)
         return acc.result()
     }
 
@@ -456,8 +513,8 @@ class FsRepository(private val context: Context) {
                         outStream.flush()
                     }
                 }
-                acc.bytes += done
-                acc.files++
+                acc.addBytes(done)
+                acc.addFiles()
             } catch (e: Exception) {
                 acc.error("Error copiando $name: ${e.message.orEmpty()}")
                 if (destNode.uri != null) saf.deleteNode(destNode) else runCatching { File(destNode.path).delete() }
@@ -483,7 +540,7 @@ class FsRepository(private val context: Context) {
             return when (decision) {
                 ConflictDecision.OVERWRITE -> FileNode.forDirectory(target.name, target.absolutePath)
                 ConflictDecision.SKIP -> {
-                    acc.skipped++
+                    acc.addSkipped()
                     null
                 }
                 ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -506,7 +563,7 @@ class FsRepository(private val context: Context) {
                     FileNode.forDirectory(name, "${destDir.path}/$name", n.lastModified(), n.uri)
                 }
                 ConflictDecision.SKIP -> {
-                    acc.skipped++
+                    acc.addSkipped()
                     null
                 }
                 ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -545,7 +602,7 @@ class FsRepository(private val context: Context) {
             return when (decision) {
                 ConflictDecision.OVERWRITE -> FileNode(name, target.absolutePath, false, 0L, 0L, CategoryEngine.extensionOf(name), CategoryEngine.classify(name))
                 ConflictDecision.SKIP -> {
-                    acc.skipped++
+                    acc.addSkipped()
                     null
                 }
                 ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -566,6 +623,7 @@ class FsRepository(private val context: Context) {
                 ConflictDecision.OVERWRITE -> {
                     val existing = saf.document(destDir)?.findFile(name)
                     if (existing == null) {
+                    if (existing == null) {
                         acc.error("No se pudo sobrescribir $name")
                         null
                     } else {
@@ -582,7 +640,7 @@ class FsRepository(private val context: Context) {
                     }
                 }
                 ConflictDecision.SKIP -> {
-                    acc.skipped++
+                    acc.addSkipped()
                     null
                 }
                 ConflictDecision.CANCEL_OPERATION -> throw ConflictCancelledException()
@@ -637,11 +695,12 @@ class FsRepository(private val context: Context) {
                 }
                 zip.finish()
             }
-            acc.files += sources.size
+            acc.addFiles(sources.size)
         } catch (e: Exception) {
             acc.error("Error comprimiendo: ${e.message.orEmpty()}")
             runCatching { destFile.delete() }
         }
+        rescan(destFile.absolutePath)
         return@withContext acc.result()
     }
 
@@ -680,7 +739,7 @@ class FsRepository(private val context: Context) {
                     }
                 }
             }
-            acc.bytes += copied
+            acc.addBytes(copied)
             zip.closeEntry()
         } catch (e: Exception) {
             acc.error("Error comprimiendo ${file.name}: ${e.message.orEmpty()}")
@@ -835,6 +894,17 @@ class FsRepository(private val context: Context) {
 
     // ------------------------------------------------------------- helpers
 
+    /**
+     * Asks MediaStore to scan [path] (a file or a directory, scanned
+     * recursively by the provider). Used after File-backed writes so new
+     * media shows up in Galería/Descargas without a manual refresh.
+     */
+    private fun rescan(path: String) {
+        runCatching {
+            MediaScannerConnection.scanFile(context, arrayOf(path), null, null)
+        }
+    }
+
     private fun uniqueFile(dir: File, name: String): File {
         var candidate = File(dir, name)
         if (!candidate.exists()) return candidate
@@ -855,6 +925,7 @@ class FsRepository(private val context: Context) {
     ) {
         private val tracker = SpeedTracker()
         private var lastEmitAt = 0L
+        @Synchronized
         suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             // Throttle UI updates to ~10 Hz; a big copy otherwise pushes one
             // progress event per 64 KB chunk (tens of thousands of frames).

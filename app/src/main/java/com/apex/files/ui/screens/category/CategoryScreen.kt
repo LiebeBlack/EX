@@ -75,6 +75,7 @@ fun CategoryScreen(category: Category) {
                 Category.AUDIO -> "Audio"
                 Category.DOCUMENT -> "Documentos"
                 Category.ARCHIVE -> "Archivos"
+                Category.DOWNLOADS -> "Descargas"
                 else -> "Categoría"
             },
             onBack = { navigator.pop() },
