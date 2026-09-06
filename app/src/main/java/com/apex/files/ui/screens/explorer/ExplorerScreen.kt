@@ -92,6 +92,7 @@ import com.apex.files.core.OpProgress
 import com.apex.files.core.OpType
 import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.fs.SizeFormatter
+import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.data.model.SortDirection
@@ -137,6 +138,8 @@ fun ExplorerScreen(location: Location) {
     var sortMenuOpen by remember { mutableStateOf(false) }
     var showFilter by remember { mutableStateOf(false) }
     var addMenuOpen by remember { mutableStateOf(false) }
+    /** Name prefilled in the compress dialog (depends on the current selection). */
+    var compressDefaultName by remember { mutableStateOf("archivo.zip") }
     /** Node whose long-press context sheet is open (null = none). */
     var contextNode by remember { mutableStateOf<FileNode?>(null) }
     val trashEnabled by container.settings.trashEnabled.collectAsStateWithLifecycle()
@@ -217,6 +220,16 @@ fun ExplorerScreen(location: Location) {
         return allFavorites
     }
 
+    /** Default archive name: one selection keeps its own name ("foto.jpg" → "foto.zip"). */
+    fun defaultZipName(): String {
+        val sel = vm.selectedNodes()
+        if (sel.size != 1) return "archivo.zip"
+        val name = sel[0].name
+        val dot = name.lastIndexOf('.')
+        val base = if (dot > 0) name.substring(0, dot) else name
+        return "$base.zip"
+    }
+
     /** Filesystem-safe name check shown before creating/renaming/compressing. */
     fun isValidName(name: String): Boolean =
         name.isNotBlank() && name != "." && name != ".." &&
@@ -225,11 +238,15 @@ fun ExplorerScreen(location: Location) {
     // Local funs can't be forward-referenced, so declare launchOperation first.
     fun launchOperation(type: OpType, flow: Flow<OpProgress>) {
         center.launch(type, flow) { ok ->
+            val error = center.lastError.value
             val msg = when {
                 ok -> vm.consumeSummary() ?: "Operación completada"
-                else -> center.lastError.value ?: vm.consumeError() ?: "Operación cancelada"
+                error != null -> error
+                else -> vm.consumeError() ?: "Operación cancelada"
             }
-            vm.onOperationFinished(ok)
+            // A real failure keeps the selection/destination so the user can
+            // retry; an explicit Cancel (no error message) cleans up instead.
+            vm.onOperationFinished(ok, cancelled = !ok && error == null)
             toast(msg)
         }
     }
@@ -497,8 +514,13 @@ fun ExplorerScreen(location: Location) {
                     Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val summary = buildList {
+                        if (folders > 0) add(if (folders == 1) "1 carpeta" else "$folders carpetas")
+                        if (files > 0) add(if (files == 1) "1 archivo" else "$files archivos")
+                        if (bytes > 0) add(SizeFormatter.format(bytes))
+                    }.joinToString(" · ")
                     Text(
-                        "$folders carpeta(s) · $files archivo(s) · ${SizeFormatter.format(bytes)}",
+                        summary,
                         style = MonoTextStyleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
@@ -538,7 +560,10 @@ fun ExplorerScreen(location: Location) {
                     }
                 },
                 onShare = { shareSelected() },
-                onCompress = { showCompressDialog = true },
+                onCompress = {
+                    compressDefaultName = defaultZipName()
+                    showCompressDialog = true
+                },
                 onDuplicate = {
                     val targets = vm.selectedNodes()
                     if (targets.isEmpty() || targets.any { it.uri != null || it.isDir }) {
@@ -620,7 +645,7 @@ fun ExplorerScreen(location: Location) {
     if (showCompressDialog) {
         InputDialog(
             title = "Comprimir",
-            initialValue = "archivo.zip",
+            initialValue = compressDefaultName,
             onConfirm = { name ->
                 showCompressDialog = false
                 if (isValidName(name)) {
@@ -682,6 +707,7 @@ fun ExplorerScreen(location: Location) {
             onCompress = {
                 contextNode = null
                 vm.enterSelection(node)
+                compressDefaultName = defaultZipName()
                 showCompressDialog = true
             },
             onExtract = {
@@ -860,8 +886,7 @@ private fun NodeContextSheet(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (node.isDir) "Carpeta · ${SizeFormatter.format(node.size)}"
-                else "${node.extension.ifBlank { "archivo" }} · ${SizeFormatter.format(node.size)}",
+                "${typeLabel(node)} · ${SizeFormatter.format(node.size)}",
                 style = MonoTextStyleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -935,5 +960,19 @@ private fun ContextRow(
             style = MaterialTheme.typography.bodyLarge,
             color = if (danger) ApexDanger else MaterialTheme.colorScheme.onSurface,
         )
+    }
+}
+
+/** Human label for a file/folder used in the context sheet header. */
+private fun typeLabel(node: FileNode): String {
+    if (node.isDir) return "Carpeta"
+    return when (node.category) {
+        Category.IMAGE -> "Imagen"
+        Category.VIDEO -> "Vídeo"
+        Category.AUDIO -> "Audio"
+        Category.DOCUMENT -> "Documento"
+        Category.ARCHIVE -> "Comprimido"
+        Category.APK -> "APK"
+        else -> node.extension.ifBlank { "Archivo" }
     }
 }

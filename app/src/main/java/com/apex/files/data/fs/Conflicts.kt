@@ -52,8 +52,17 @@ class ConflictController {
 
     private var deferred: CompletableDeferred<ConflictDecision>? = null
 
+    /**
+     * “Apply to all”: once the user picks a decision for the whole operation,
+     * later collisions are resolved with it without showing another dialog.
+     */
+    private var applyAllDecision: ConflictDecision? = null
+
     /** Called by the file layer when a destination name already exists. */
     suspend fun resolve(conflict: Conflict): ConflictDecision {
+        // Apply-to-all is in effect: answer every remaining collision silently.
+        val auto = synchronized(lock) { applyAllDecision }
+        if (auto != null && auto != ConflictDecision.CANCEL_OPERATION) return auto
         val busy = synchronized(lock) { deferred != null || _pending.value != null }
         if (busy) return ConflictDecision.KEEP_BOTH
         val d = CompletableDeferred<ConflictDecision>()
@@ -71,13 +80,30 @@ class ConflictController {
         }
     }
 
-    /** Called by the dialog UI with the user's choice. */
-    fun answer(decision: ConflictDecision) {
-        synchronized(lock) { deferred?.complete(decision) }
+    /**
+     * Called by the dialog UI with the user's choice. When [applyToAll] is
+     * true the choice is remembered for every remaining conflict of the
+     * current operation; cancelling always clears the stored choice.
+     */
+    fun answer(decision: ConflictDecision, applyToAll: Boolean = false) {
+        synchronized(lock) {
+            if (applyToAll && decision != ConflictDecision.CANCEL_OPERATION) {
+                applyAllDecision = decision
+            }
+            if (decision == ConflictDecision.CANCEL_OPERATION) {
+                applyAllDecision = null
+            }
+            deferred?.complete(decision)
+        }
     }
 
     /** Dismissed dialog (back press) aborts the pending operation safely. */
     fun dismiss() = answer(ConflictDecision.CANCEL_OPERATION)
+
+    /** Clears a remembered apply-to-all choice at the start of an operation. */
+    fun resetApplyAll() {
+        synchronized(lock) { applyAllDecision = null }
+    }
 
     /** True when a conflict dialog is currently on screen. */
     fun isPending(): Boolean = synchronized(lock) { deferred != null }

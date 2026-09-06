@@ -84,7 +84,9 @@ fun ApexAppUi(container: AppContainer) {
                     pendingConflict?.let { conflict ->
                         ConflictDialog(
                             conflict = conflict,
-                            onDecision = container.conflicts::answer,
+                            onDecision = { decision, applyAll ->
+                                container.conflicts.answer(decision, applyAll)
+                            },
                         )
                     }
                 }

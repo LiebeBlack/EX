@@ -328,6 +328,7 @@ class ExplorerViewModel(
     }
 
     fun copyFlow(): Flow<OpProgress> = flow {
+        container.conflicts.resetApplyAll()
         val dest = _state.value.current ?: return@flow
         val sources = destSources()
         clearSummary()
@@ -339,6 +340,7 @@ class ExplorerViewModel(
     }
 
     fun moveFlow(): Flow<OpProgress> = flow {
+        container.conflicts.resetApplyAll()
         val dest = _state.value.current ?: return@flow
         val sources = destSources()
         clearSummary()
@@ -380,6 +382,7 @@ class ExplorerViewModel(
     }
 
     fun compressFlow(name: String): Flow<OpProgress> = flow {
+        container.conflicts.resetApplyAll()
         val dest = _state.value.current ?: return@flow
         val sources = destSources()
         clearSummary()
@@ -444,10 +447,18 @@ class ExplorerViewModel(
         return base + suffix
     }
 
-    /** Call after an operation finishes (ok = completed, false = cancelled/failed). */
-    fun onOperationFinished(ok: Boolean) {
-        if (!ok) {
-            _opError.value = "Operación no completada"
+    /**
+     * Call after an operation finishes. Successful or explicitly cancelled
+     * operations leave the browser clean; a failed/interrupted one keeps the
+     * selection and destination mode so the user can retry or pick another
+     * destination without re-selecting everything.
+     */
+    fun onOperationFinished(ok: Boolean, cancelled: Boolean = false) {
+        if (!ok && !cancelled) {
+            // The failure message is toasted by the caller; keep the current
+            // selection and destination so the user can retry the operation.
+            refresh()
+            return
         }
         clearSelection()
         cancelDestMode()
@@ -535,6 +546,7 @@ class ExplorerViewModel(
 
     /** Extracts the selected archive into the current folder. */
     fun extractHereFlow(): Flow<OpProgress> = flow {
+        container.conflicts.resetApplyAll()
         val dest = _state.value.current ?: return@flow
         val source = selectedNodes().firstOrNull() ?: return@flow
         clearSummary()

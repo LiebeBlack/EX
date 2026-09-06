@@ -80,6 +80,7 @@ class ArchiveViewerViewModel(
     }
 
     fun extractFlow(entry: ArchiveEntry, destDir: FileNode): Flow<OpProgress> = flow {
+        container.conflicts.resetApplyAll()
         _opSummary.value = null
         val acc = container.archive.extract(
             entry,
@@ -93,6 +94,7 @@ class ArchiveViewerViewModel(
 
     /** Extracts the entire archive into [destDir]. */
     fun extractAllFlow(destDir: FileNode): Flow<OpProgress> = flow {
+        container.conflicts.resetApplyAll()
         _opSummary.value = null
         val acc = container.archive.extractAll(
             node,

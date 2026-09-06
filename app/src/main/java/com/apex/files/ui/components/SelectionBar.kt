@@ -82,7 +82,7 @@ fun SelectionBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "$count seleccionados",
+                    if (count == 1) "1 seleccionado" else "$count seleccionados",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
