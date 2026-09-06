@@ -140,7 +140,7 @@ fun SmartGroupsScreen() {
                         GroupCard(info) { vm.openGroup(info.group) }
                         TextButton(onClick = { moveGroup = info.group }) {
                             Text(
-                                "Mover a ${vm.smartDestDir(info.group).path}",
+                                "Mover a ${vm.smartDestPath(info.group)}",
                                 color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.labelSmall,
                             )
@@ -155,7 +155,7 @@ fun SmartGroupsScreen() {
         ConfirmDialog(
             title = "¿Mover grupo?",
             message = "Se moverán ${state.groups.firstOrNull { it.group == group }?.nodes?.size ?: 0} " +
-                "archivos a ${vm.smartDestDir(group).path}. ¿Continuar?",
+                "archivos a ${vm.smartDestPath(group)}. ¿Continuar?",
             confirmLabel = "Mover",
             onConfirm = {
                 moveGroup = null

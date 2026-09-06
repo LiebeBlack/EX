@@ -91,21 +91,23 @@ class SmartGroupsViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(openGroup = null) }
     }
 
-    /** Destination folder for a physical move of [group]. */
-    fun smartDestDir(group: SmartGroup): FileNode {
+    /** Destination folder path for a physical move of [group] (pure). */
+    fun smartDestPath(group: SmartGroup): String {
         val base = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             "Apex-Organizadas",
         )
-        val dir = File(base, group.label)
-        runCatching { dir.mkdirs() }
-        return FileNode.forDirectory(dir.name, dir.absolutePath)
+        return File(base, group.label).absolutePath
     }
 
     /** Moves every file of [group] into its smart folder (user-confirmed). */
     fun moveFlow(group: SmartGroup): Flow<OpProgress> = flow {
         val info = _state.value.groups.firstOrNull { it.group == group } ?: return@flow
-        val dest = smartDestDir(group)
+        val destDir = File(smartDestPath(group))
+        withContext(Dispatchers.IO) {
+            runCatching { destDir.mkdirs() }
+        }
+        val dest = FileNode.forDirectory(destDir.name, destDir.absolutePath)
         var acc = OpResult()
         for (node in info.nodes) {
             acc += container.fs.move(
