@@ -9,6 +9,7 @@
 }
 
 # pdfbox-android: reflection-based text/rendering engine, needs its classes kept.
--keep class org.apache.pdfbox.** { *; }
--dontwarn org.apache.pdfbox.**
+# The Android port relocates the Apache package to com.tom_roush.pdfbox.
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.tom_roush.pdfbox.**
 -dontwarn org.bouncycastle.**

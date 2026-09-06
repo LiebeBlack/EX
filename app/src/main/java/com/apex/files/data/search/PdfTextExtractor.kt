@@ -3,9 +3,9 @@ package com.apex.files.data.search
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.rendering.PDFRenderer
-import org.apache.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.rendering.PDFRenderer
+import com.tom_roush.pdfbox.text.PDFTextStripper
 
 /**
  * Extracts the native text layer of a PDF with pdfbox-android. When the PDF is

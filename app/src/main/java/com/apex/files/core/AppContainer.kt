@@ -35,6 +35,13 @@ class AppContainer(context: Context) {
 
     val appContext: Context = context.applicationContext
 
+    init {
+        // pdfbox-android must be initialized once before any PDF is parsed
+        // (it wires asset/font loading to the Android context). Failures are
+        // non-fatal: the semantic index simply skips PDF text extraction.
+        runCatching { com.tom_roush.pdfbox.util.PDFBoxResourceLoader.init(appContext) }
+    }
+
     val settings: SettingsRepository by lazy { SettingsRepository(appContext) }
     /** Bridge between suspend file operations and the per-conflict dialog UI. */
     val conflicts: ConflictController by lazy { ConflictController() }

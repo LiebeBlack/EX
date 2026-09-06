@@ -44,7 +44,7 @@ fun ConflictDialog(
     onDecision: (ConflictDecision, applyToAll: Boolean) -> Unit,
 ) {
     var applyAll by remember { mutableStateOf(false) }
-    Dialog(onDismissRequest = { onDecision(ConflictDecision.CANCEL_OPERATION) }) {
+    Dialog(onDismissRequest = { onDecision(ConflictDecision.CANCEL_OPERATION, false) }) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -98,7 +98,7 @@ fun ConflictDialog(
                     Text("Omitir", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 TextButton(
-                    onClick = { onDecision(ConflictDecision.CANCEL_OPERATION, applyAll = false) },
+                    onClick = { onDecision(ConflictDecision.CANCEL_OPERATION, false) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Cancelar operación", color = MaterialTheme.colorScheme.onSurfaceVariant)

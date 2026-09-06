@@ -50,7 +50,7 @@ class JunkAnalyzer(context: Context) {
     private val packageManager: PackageManager = context.packageManager
 
     private val TEMP_EXTS = setOf("tmp", "part", "crdownload", "download", "temp")
-    private const val TEMP_MAX_DEPTH = 4
+    private val TEMP_MAX_DEPTH = 4
 
     fun scan(): Flow<ScanState> = flow {
         val found = ArrayList<JunkItem>()
@@ -79,7 +79,7 @@ class JunkAnalyzer(context: Context) {
         if (!androidDir.isDirectory) return
         val children = androidDir.listFiles() ?: return
         for (child in children) {
-            ensureActive()
+            currentCoroutineContext().ensureActive()
             if (!child.isDirectory) continue
             val pkg = child.name
             emit(ScanState(currentPath = child.absolutePath, found = out.toList()))
@@ -116,10 +116,10 @@ class JunkAnalyzer(context: Context) {
 
     private suspend fun scanTemp(dir: File, depth: Int, out: MutableList<JunkItem>) {
         if (depth > TEMP_MAX_DEPTH) return
-        ensureActive()
+        currentCoroutineContext().ensureActive()
         val children = dir.listFiles() ?: return
         for (child in children) {
-            ensureActive()
+            currentCoroutineContext().ensureActive()
             if (Paths.isExcluded(child)) continue
             if (child.name.startsWith(".")) continue
             if (child.isDirectory) {

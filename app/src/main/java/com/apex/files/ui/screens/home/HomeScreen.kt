@@ -23,7 +23,7 @@ import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.Broom
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -218,7 +218,7 @@ fun HomeScreen() {
                     add(ToolSpec(Icons.Outlined.AutoAwesome, "Carpetas inteligentes", "Grupos por contenido") {
                         navigator.push(Screen.SmartGroups)
                     })
-                    add(ToolSpec(Icons.Outlined.Broom, "Limpieza Inteligente", "Residuos y cachés") {
+                    add(ToolSpec(Icons.Outlined.AutoFixHigh, "Limpieza Inteligente", "Residuos y cachés") {
                         navigator.push(Screen.Cleanup)
                     })
                 }

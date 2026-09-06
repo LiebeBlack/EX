@@ -623,7 +623,6 @@ class FsRepository(private val context: Context) {
                 ConflictDecision.OVERWRITE -> {
                     val existing = saf.document(destDir)?.findFile(name)
                     if (existing == null) {
-                    if (existing == null) {
                         acc.error("No se pudo sobrescribir $name")
                         null
                     } else {
@@ -859,16 +858,30 @@ class FsRepository(private val context: Context) {
         }
     }
 
-    /** Returns a real [File] for reading (copies SAF documents to cache). */
+    /**
+     * Returns a real [File] for reading (copies SAF documents to cache).
+     * The copy lands in a temp file and is atomically renamed, so a failed
+     * or cancelled download can never leave a truncated file behind that a
+     * later call would serve as if it were complete.
+     */
     fun fileForReading(node: FileNode): File {
         if (node.uri == null) return File(node.path)
         val cache = File(context.cacheDir, "apex_read_" + (node.uri.lastPathSegment ?: node.name))
         if (cache.exists()) return cache
         val input = resolver.openInputStream(node.uri) ?: return cache
-        input.use { src ->
-            cache.outputStream().use { dst ->
-                src.copyTo(dst, bufferSize = 64 * 1024)
+        val tmp = File(context.cacheDir, cache.name + ".tmp")
+        try {
+            input.use { src ->
+                tmp.outputStream().use { dst ->
+                    src.copyTo(dst, bufferSize = 64 * 1024)
+                }
             }
+            if (!tmp.renameTo(cache)) {
+                // A concurrent reader may have completed the copy first.
+                if (!cache.exists()) tmp.renameTo(cache)
+            }
+        } catch (e: Exception) {
+            runCatching { tmp.delete() }
         }
         return cache
     }
@@ -925,16 +938,17 @@ class FsRepository(private val context: Context) {
     ) {
         private val tracker = SpeedTracker()
         private var lastEmitAt = 0L
-        @Synchronized
         suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             // Throttle UI updates to ~10 Hz; a big copy otherwise pushes one
             // progress event per 64 KB chunk (tens of thousands of frames).
             val isFinal = bytesDone == bytesTotal ||
                 (bytesTotal == null && filesTotal != null && filesDone == filesTotal)
-            val now = SystemClock.uptimeMillis()
-            if (!isFinal && now - lastEmitAt < 100L) return
-            lastEmitAt = now
-            val speed = tracker.update(bytesDone)
+            val speed = synchronized(this) {
+                val now = SystemClock.uptimeMillis()
+                if (!isFinal && now - lastEmitAt < 100L) return
+                lastEmitAt = now
+                tracker.update(bytesDone)
+            }
             onProgress(OpProgress(type, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }
     }

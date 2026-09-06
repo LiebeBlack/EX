@@ -59,6 +59,21 @@ fun helpTips(screen: Screen): HelpTips? = when (screen) {
             "«Restablecer ajustes» devuelve todo a los valores por defecto.",
         ),
     )
+    is Screen.SmartGroups -> HelpTips(
+        "Carpetas inteligentes",
+        listOf(
+            "Agrupa tus archivos por contenido: OCR, PDFs, texto y tipo.",
+            "«Mover a…» traslada todo el grupo a una carpeta organizada.",
+            "Los archivos nunca se mueven sin tu confirmación explícita.",
+        ),
+    )
+    is Screen.Cleanup -> HelpTips(
+        "Limpieza Inteligente",
+        listOf(
+            "Detecta residuos de apps desinstaladas, cachés y temporales.",
+            "Revisa la lista antes de confirmar: el borrado es permanente.",
+        ),
+    )
     is Screen.Cleaner -> HelpTips(
         "Limpiador",
         listOf(

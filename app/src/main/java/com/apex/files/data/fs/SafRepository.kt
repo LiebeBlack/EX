@@ -486,16 +486,17 @@ class SafRepository(private val context: Context) {
     ) {
         private val tracker = SpeedTracker()
         private var lastEmitAt = 0L
-        @Synchronized
         suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
             // Throttle UI updates to ~10 Hz; a big copy otherwise pushes one
             // progress event per 64 KB chunk (tens of thousands of frames).
             val isFinal = bytesDone == bytesTotal ||
                 (bytesTotal == null && filesTotal != null && filesDone == filesTotal)
-            val now = SystemClock.uptimeMillis()
-            if (!isFinal && now - lastEmitAt < 100L) return
-            lastEmitAt = now
-            val speed = tracker.update(bytesDone)
+            val speed = synchronized(this) {
+                val now = SystemClock.uptimeMillis()
+                if (!isFinal && now - lastEmitAt < 100L) return
+                lastEmitAt = now
+                tracker.update(bytesDone)
+            }
             onProgress(OpProgress(type, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }
     }
