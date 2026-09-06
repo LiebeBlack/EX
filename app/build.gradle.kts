@@ -86,6 +86,12 @@ android {
         jniLibs {
             // Keep native libs compressed and unmapped at install time.
             useLegacyPackaging = false
+            // Prebuilt .so files shipped inside Google AARs (androidx.graphics
+            // path renderer, ML Kit OCR pipeline). They arrive already
+            // symbol-stripped; telling AGP to keep them as-is silences the
+            // per-build "Unable to strip the following libraries" warning.
+            keepDebugSymbols += "**/libandroidx.graphics.path.so"
+            keepDebugSymbols += "**/libmlkit_google_ocr_pipeline.so"
         }
     }
 
