@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.core.ListDensity
+import com.apex.files.core.OpProgress
 import com.apex.files.core.OpType
 import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.fs.SizeFormatter
@@ -92,6 +93,7 @@ import com.apex.files.ui.theme.ApexBorder
 import com.apex.files.ui.theme.ApexContainer
 import com.apex.files.ui.theme.ApexContainerHigh
 import com.apex.files.ui.theme.MonoTextStyleSmall
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ExplorerScreen(location: Location) {
@@ -175,8 +177,13 @@ fun ExplorerScreen(location: Location) {
         toast("Ruta(s) copiadas al portapapeles")
     }
 
+    /** Filesystem-safe name check shown before creating/renaming/compressing. */
+    fun isValidName(name: String): Boolean =
+        name.isNotBlank() && name != "." && name != ".." &&
+            !name.contains('/') && !name.contains('\\')
+
     // Local funs can't be forward-referenced, so declare launchOperation first.
-    fun launchOperation(type: OpType, flow: kotlinx.coroutines.flow.Flow<com.apex.files.core.OpProgress>) {
+    fun launchOperation(type: OpType, flow: Flow<OpProgress>) {
         center.launch(type, flow) { ok ->
             val msg = when {
                 ok -> vm.consumeSummary() ?: "Operación completada"
@@ -528,7 +535,7 @@ fun ExplorerScreen(location: Location) {
             initialValue = node?.name ?: "",
             onConfirm = { name ->
                 showRenameDialog = false
-                vm.renameSelected(name)
+                if (isValidName(name)) vm.renameSelected(name) else toast("Nombre no válido")
             },
             onDismiss = { showRenameDialog = false },
         )
@@ -539,7 +546,7 @@ fun ExplorerScreen(location: Location) {
             placeholder = "Nombre",
             onConfirm = { name ->
                 showNewFolderDialog = false
-                vm.createFolder(name)
+                if (isValidName(name)) vm.createFolder(name) else toast("Nombre no válido")
             },
             onDismiss = { showNewFolderDialog = false },
         )
@@ -550,7 +557,7 @@ fun ExplorerScreen(location: Location) {
             initialValue = "nuevo.txt",
             onConfirm = { name ->
                 showNewFileDialog = false
-                vm.createFile(name)
+                if (isValidName(name)) vm.createFile(name) else toast("Nombre no válido")
             },
             onDismiss = { showNewFileDialog = false },
         )
@@ -561,7 +568,11 @@ fun ExplorerScreen(location: Location) {
             initialValue = "archivo.zip",
             onConfirm = { name ->
                 showCompressDialog = false
-                launchOperation(OpType.COMPRESS, vm.compressFlow(name))
+                if (isValidName(name)) {
+                    launchOperation(OpType.COMPRESS, vm.compressFlow(name))
+                } else {
+                    toast("Nombre no válido")
+                }
             },
             onDismiss = { showCompressDialog = false },
         )

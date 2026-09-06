@@ -14,7 +14,10 @@ import java.io.IOException
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
@@ -82,7 +85,9 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         onProgress: suspend (OpProgress) -> Unit,
         onConflict: (suspend (Conflict) -> ConflictDecision)? = null,
     ): OpResult = withContext(Dispatchers.IO) {
-        require(destDir.uri == null) { "La extracción a SAF aún no está soportada" }
+        if (destDir.uri != null) {
+            return@withContext OpResult(errors = 1, firstError = "La extracción a almacenamiento SAF aún no está soportada")
+        }
         val base = File(destDir.path)
         val ext = extensionOf(archiveNode.name)
         val sink = ProgressSink(onProgress)
@@ -96,7 +101,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
                         if (!target.exists() && !target.mkdirs()) acc.error("No se pudo crear la carpeta ${entry.name}")
                         val e = zip.entries()
                         while (e.hasMoreElements()) {
-                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                            currentCoroutineContext().ensureActive()
                             val ze = e.nextElement()
                             if (!ze.name.startsWith(prefix)) continue
                             val rel = ze.name.removePrefix(prefix)
@@ -127,9 +132,9 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
                 reader.use {
                     val prefix = entry.name.trimEnd('/')
                     var found = false
-                    val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+                    val job = currentCoroutineContext()[Job]
                     it.forEachEntry { tarEntry, stream ->
-                        if (job?.isActive == false) throw kotlinx.coroutines.CancellationException("extracción cancelada")
+                        if (job?.isActive == false) throw CancellationException("extracción cancelada")
                         val name = tarEntry.name.trimEnd('/')
                         if (name == prefix) {
                             found = true
@@ -174,13 +179,17 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         onProgress: suspend (OpProgress) -> Unit,
         onConflict: (suspend (Conflict) -> ConflictDecision)? = null,
     ): OpResult = withContext(Dispatchers.IO) {
-        require(destDir.uri == null) { "La extracción a SAF aún no está soportada" }
+        if (destDir.uri != null) {
+            // Honest result instead of throwing: SAF destinations are not
+            // supported yet and the UI must surface a clean message.
+            return@withContext OpResult(errors = 1, firstError = "La extracción a almacenamiento SAF aún no está soportada")
+        }
         val acc = OpAccumulator()
         open(archiveNode).use { handle ->
             val entries = handle.entries()
             val topLevel = entries.filter { it.isDir || !it.name.contains('/') }
             for (entry in topLevel) {
-                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                currentCoroutineContext().ensureActive()
                 acc += extract(entry, archiveNode, destDir, onProgress, onConflict)
             }
         }
@@ -243,7 +252,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
             input.use { src ->
                 FileOutputStream(dest).use { out ->
                     while (true) {
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        currentCoroutineContext().ensureActive()
                         val read = src.read(buffer)
                         if (read < 0) break
                         if (read > 0) {

@@ -13,6 +13,7 @@ import com.apex.files.core.OpType
 import com.apex.files.data.fs.CountResult
 import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.fs.OpResult
+import com.apex.files.data.fs.SearchFilters
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.data.model.SortDirection
@@ -72,12 +73,13 @@ class ExplorerViewModel(
         val filterQuery: String = "",
         /** One-shot toast messages (rename/folder/create failures). */
         val notice: String? = null,
+        /**
+         * Entries after applying the live name filter. Memoized: recomputed
+         * only when the query or the folder listing changes, so the UI never
+         * re-filters the whole list on every state read.
+         */
+        val visibleEntries: List<FileNode> = emptyList(),
     ) {
-        /** Entries after applying the live name filter. */
-        val visibleEntries: List<FileNode>
-            get() = if (filterQuery.isBlank()) entries
-            else entries.filter { com.apex.files.data.fs.SearchFilters.matchesName(it.name, filterQuery) }
-
         val filteredOut: Int get() = entries.size - visibleEntries.size
     }
 
@@ -149,7 +151,13 @@ class ExplorerViewModel(
                 if (gen == refreshGeneration) _state.update { it.copy(error = e.message ?: "Error") }
                 emptyList()
             }
-            if (gen == refreshGeneration) _state.update { it.copy(entries = entries, loading = false) }
+            if (gen == refreshGeneration) {
+                _state.update { s ->
+                    val visible = if (s.filterQuery.isBlank()) entries
+                    else entries.filter { SearchFilters.matchesName(it.name, s.filterQuery) }
+                    s.copy(entries = entries, visibleEntries = visible, loading = false)
+                }
+            }
         }
     }
 
@@ -162,6 +170,8 @@ class ExplorerViewModel(
             it.copy(
                 ancestors = it.ancestors + current,
                 current = node,
+                filterQuery = "",
+                visibleEntries = emptyList(),
             )
         }
         refresh()
@@ -176,6 +186,8 @@ class ExplorerViewModel(
             it.copy(
                 ancestors = it.ancestors.dropLast(1),
                 current = parent,
+                filterQuery = "",
+                visibleEntries = emptyList(),
             )
         }
         refresh()
@@ -191,6 +203,8 @@ class ExplorerViewModel(
             it.copy(
                 ancestors = it.ancestors.take(idx),
                 current = ancestor,
+                filterQuery = "",
+                visibleEntries = emptyList(),
             )
         }
         refresh()
@@ -369,6 +383,10 @@ class ExplorerViewModel(
         val dest = _state.value.current ?: return@flow
         val sources = destSources()
         clearSummary()
+        if (!isValidName(name)) {
+            _opError.value = "Nombre de archivo no válido"
+            return@flow
+        }
         val acc = container.fs.compress(
             sources,
             dest,
@@ -432,6 +450,10 @@ class ExplorerViewModel(
 
     fun renameSelected(newName: String) {
         val node = selectedNodes().firstOrNull() ?: return
+        if (!isValidName(newName)) {
+            _state.update { it.copy(notice = "Nombre no válido: evita «/», «\\», «.» y «..»") }
+            return
+        }
         viewModelScope.launch {
             val renamed = container.fs.rename(node, newName)
             if (renamed == null) {
@@ -445,6 +467,10 @@ class ExplorerViewModel(
 
     fun createFolder(name: String) {
         val cur = _state.value.current ?: return
+        if (!isValidName(name)) {
+            _state.update { it.copy(notice = "Nombre no válido: evita «/», «\\», «.» y «..»") }
+            return
+        }
         viewModelScope.launch {
             val created = container.fs.createDirectory(cur, name)
             if (created == null) {
@@ -457,6 +483,10 @@ class ExplorerViewModel(
 
     fun createFile(name: String) {
         val cur = _state.value.current ?: return
+        if (!isValidName(name)) {
+            _state.update { it.copy(notice = "Nombre no válido: evita «/», «\\», «.» y «..»") }
+            return
+        }
         viewModelScope.launch {
             val created = container.fs.createFile(cur, name)
             if (created == null) {
@@ -470,8 +500,18 @@ class ExplorerViewModel(
     // -------------------------------------------------------- live filter
 
     fun setFilterQuery(query: String) {
-        _state.update { it.copy(filterQuery = query) }
+        _state.update { s ->
+            val visible = if (query.isBlank()) s.entries
+            else s.entries.filter { SearchFilters.matchesName(it.name, query) }
+            s.copy(filterQuery = query, visibleEntries = visible)
+        }
     }
+
+    /** Filesystem-safe name check shared by create/rename/compress. */
+    private fun isValidName(name: String): Boolean =
+        name.isNotBlank() &&
+            name != "." && name != ".." &&
+            !name.contains('/') && !name.contains('\\')
 
     // ------------------------------------------------------- extract here
 
@@ -521,8 +561,10 @@ class ExplorerViewModel(
         if (node.isDir) {
             _state.update { it.copy(properties = it.properties?.copy(computingSize = true)) }
             viewModelScope.launch {
-                val size = container.fs.sizeOf(node)
-                val count = container.fs.countEntries(node)
+                // Fallbacks: a revoked permission or I/O failure must not leave
+                // the sheet spinning on "Calculando…" forever.
+                val size = runCatching { container.fs.sizeOf(node) }.getOrDefault(0L)
+                val count = runCatching { container.fs.countEntries(node) }.getOrNull()
                 _state.update {
                     it.copy(
                         properties = it.properties?.copy(

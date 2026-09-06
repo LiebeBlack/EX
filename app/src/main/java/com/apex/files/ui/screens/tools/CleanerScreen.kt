@@ -46,6 +46,7 @@ import com.apex.files.ui.components.ConfirmDialog
 import com.apex.files.ui.components.EmptyState
 import com.apex.files.ui.components.NeonProgressBar
 import com.apex.files.ui.components.RootPickerRow
+import com.apex.files.ui.theme.ApexDanger
 import com.apex.files.ui.theme.MonoTextStyleSmall
 
 @Composable
@@ -162,7 +163,7 @@ fun CleanerScreen() {
                     ) {
                         Text(
                             "Eliminar seleccionadas (${state.selection.size})",
-                            color = com.apex.files.ui.theme.ApexDanger,
+                            color = ApexDanger,
                         )
                     }
                 }

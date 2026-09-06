@@ -49,47 +49,54 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     fun refresh(force: Boolean = true) {
         // Volumes + StatFs usage.
         viewModelScope.launch {
-            val (volumes, total, used) = withContext(Dispatchers.IO) {
-                val vols = container.drives.volumes()
-                var t = 0L
-                var u = 0L
-                for (v in vols) {
-                    v.path?.let { path ->
-                        StorageStats.usageOf(path)?.let {
-                            t += it.totalBytes
-                            u += it.usedBytes
+            // Fallback: if volume enumeration fails (unmounted storage,
+            // missing permission) keep the previous values instead of dying.
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val vols = container.drives.volumes()
+                    var t = 0L
+                    var u = 0L
+                    for (v in vols) {
+                        v.path?.let { path ->
+                            StorageStats.usageOf(path)?.let {
+                                t += it.totalBytes
+                                u += it.usedBytes
+                            }
                         }
                     }
+                    Triple(vols, t, u)
                 }
-                Triple(vols, t, u)
+            }.getOrNull()?.let { (volumes, total, used) ->
+                _state.update { it.copy(totalBytes = total, usedBytes = used, drives = volumes) }
             }
-            _state.update { it.copy(totalBytes = total, usedBytes = used, drives = volumes) }
         }
 
         // Category counts + search index, both served from the disk snapshot
         // when possible instead of re-scanning every volume root.
         viewModelScope.launch {
             _state.update { it.copy(indexing = true) }
-            val counts = HashMap<Category, Int>()
-            var topLarge: List<FileNode> = emptyList()
-            withContext(Dispatchers.IO) {
-                ensureIndexLoaded(force)
-                // Media categories come from MediaStore (same source as the
-                // category screens); docs/archives come from the search index.
-                // Never merge both for the same category — that double-counts.
-                counts[Category.IMAGE] = container.mediaStore.count(Category.IMAGE)
-                counts[Category.VIDEO] = container.mediaStore.count(Category.VIDEO)
-                counts[Category.AUDIO] = container.mediaStore.count(Category.AUDIO)
-                container.index.countByCategory().forEach { (cat, n) ->
-                    if (cat == Category.DOCUMENT || cat == Category.ARCHIVE) {
-                        counts.merge(cat, n, Int::plus)
+            val result: Pair<Map<Category, Int>, List<FileNode>> = runCatching {
+                withContext(Dispatchers.IO) {
+                    ensureIndexLoaded(force)
+                    val counts = HashMap<Category, Int>()
+                    // Media categories come from MediaStore (same source as the
+                    // category screens); docs/archives come from the search
+                    // index. Never merge both for the same category — that
+                    // double-counts.
+                    counts[Category.IMAGE] = container.mediaStore.count(Category.IMAGE)
+                    counts[Category.VIDEO] = container.mediaStore.count(Category.VIDEO)
+                    counts[Category.AUDIO] = container.mediaStore.count(Category.AUDIO)
+                    container.index.countByCategory().forEach { (cat, n) ->
+                        if (cat == Category.DOCUMENT || cat == Category.ARCHIVE) {
+                            counts.merge(cat, n, Int::plus)
+                        }
                     }
+                    // Top-3 largest files as instant “limpieza” suggestions.
+                    counts to container.index.largestFiles(3, minBytes = 0L)
                 }
-                // Top-3 largest files as instant “limpieza” suggestions.
-                topLarge = container.index.largestFiles(3, minBytes = 0L)
-            }
+            }.getOrElse { emptyMap<Category, Int>() to emptyList() }
             _state.update {
-                it.copy(categoryCounts = counts, largest = topLarge, indexing = false)
+                it.copy(categoryCounts = result.first, largest = result.second, indexing = false)
             }
         }
     }

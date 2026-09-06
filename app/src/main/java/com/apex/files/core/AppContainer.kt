@@ -10,6 +10,7 @@ import com.apex.files.data.fs.ConflictController
 import com.apex.files.data.fs.FsRepository
 import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.fs.MemoryIndex
+import com.apex.files.data.fs.Paths
 import com.apex.files.data.fs.SqliteRepository
 import com.apex.files.data.fs.TrashManager
 import com.apex.files.data.media.MediaStoreRepository
@@ -50,9 +51,9 @@ class AppContainer(context: Context) {
             rootForPath = { path -> trashVolumeRoot(path) },
             allRoots = {
                 buildList {
-                    val internal = com.apex.files.data.fs.Paths.internalRoot()
+                    val internal = Paths.internalRoot()
                     if (internal.exists()) add(internal)
-                    addAll(com.apex.files.data.fs.Paths.removableRoots())
+                    addAll(Paths.removableRoots())
                 }
             },
         )
@@ -63,12 +64,12 @@ class AppContainer(context: Context) {
      * when the path starts with that root, otherwise the internal storage
      * root. Keeps the trash on the same volume as the deleted files.
      */
-    private fun trashVolumeRoot(path: String): java.io.File {
-        for (root in com.apex.files.data.fs.Paths.removableRoots()) {
+    private fun trashVolumeRoot(path: String): File {
+        for (root in Paths.removableRoots()) {
             val rootPath = root.absolutePath
             if (path == rootPath || path.startsWith("$rootPath/")) return root
         }
-        return com.apex.files.data.fs.Paths.internalRoot()
+        return Paths.internalRoot()
     }
 
     // Algorithmic tools (100% local, zero dependencies).

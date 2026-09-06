@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apex.files.Navigator
 import com.apex.files.Screen
 import com.apex.files.core.AppContainer
+import com.apex.files.data.model.Location
 import com.apex.files.ui.components.ConflictDialog
 import com.apex.files.ui.components.OperationCenter
 import com.apex.files.ui.components.OperationCenterViewModel
@@ -70,7 +71,7 @@ fun ApexAppUi(container: AppContainer) {
                                 permissionsReady = true
                                 navigator.replace(
                                     Screen.Explorer(
-                                        com.apex.files.data.model.Location.Saf(uri, "SAF")
+                                        Location.Saf(uri, "SAF")
                                     )
                                 )
                             },

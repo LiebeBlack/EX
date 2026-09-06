@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.data.fs.OpResult
+import com.apex.files.data.fs.Paths
 import com.apex.files.data.fs.TrashManager
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,9 +79,9 @@ class TrashViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun trashRoots(): List<File> = buildList {
-        val internal = com.apex.files.data.fs.Paths.internalRoot()
+        val internal = Paths.internalRoot()
         if (internal.exists()) add(internal)
-        addAll(com.apex.files.data.fs.Paths.removableRoots())
+        addAll(Paths.removableRoots())
     }
 
     private fun summarize(verb: String, result: OpResult): String = buildString {

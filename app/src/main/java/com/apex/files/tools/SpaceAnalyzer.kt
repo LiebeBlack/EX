@@ -1,5 +1,6 @@
 package com.apex.files.tools
 
+import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.fs.FsRepository
 import com.apex.files.data.fs.Paths
 import com.apex.files.data.model.Category
@@ -84,7 +85,7 @@ class SpaceAnalyzer(private val fs: FsRepository) {
                         SpaceNode(
                             child.name,
                             size,
-                            com.apex.files.data.fs.CategoryEngine.classify(child.name),
+                            CategoryEngine.classify(child.name),
                             isFile = true,
                         )
                     )

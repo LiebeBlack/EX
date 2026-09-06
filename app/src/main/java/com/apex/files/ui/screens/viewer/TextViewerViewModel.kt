@@ -9,6 +9,7 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.nio.charset.Charset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -406,8 +407,8 @@ class TextViewerViewModel(
         }
     }
 
-    private fun charsetFor(encoding: String): java.nio.charset.Charset = try {
-        java.nio.charset.Charset.forName(encoding)
+    private fun charsetFor(encoding: String): Charset = try {
+        Charset.forName(encoding)
     } catch (e: Exception) {
         Charsets.UTF_8
     }

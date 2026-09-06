@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
 import com.apex.files.ui.LocalContainer
@@ -143,7 +144,7 @@ private fun CategoryTile(node: FileNode, category: Category, onClick: () -> Unit
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            com.apex.files.data.fs.SizeFormatter.format(node.size),
+            SizeFormatter.format(node.size),
             style = MonoTextStyleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

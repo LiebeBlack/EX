@@ -45,9 +45,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     // --------------------------------------------------------- cache manager
 
-    /** Coil thumbnail cache size in bytes (0 when unavailable). */
+    /** Coil thumbnail cache size in bytes (0 when unavailable or on failure). */
     suspend fun thumbnailCacheBytes(): Long = withContext(Dispatchers.IO) {
-        container.imageLoader.diskCache?.size ?: 0L
+        runCatching { container.imageLoader.diskCache?.size ?: 0L }.getOrDefault(0L)
     }
 
     /** Wipes the thumbnail caches (disk + memory). */

@@ -63,6 +63,10 @@ class MediaStoreRepository(private val context: Context) {
                     }
             } catch (e: SecurityException) {
                 return@withContext emptyList()
+            } catch (e: Exception) {
+                // Fallback: a revoked permission or a flaky provider must
+                // never take down the whole Home screen.
+                return@withContext emptyList()
             }
             nodes
         }
@@ -78,6 +82,8 @@ class MediaStoreRepository(private val context: Context) {
                 null,
             )?.use { cursor -> cursor.count } ?: 0
         } catch (e: SecurityException) {
+            0
+        } catch (e: Exception) {
             0
         }
     }

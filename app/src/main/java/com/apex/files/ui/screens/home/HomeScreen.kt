@@ -58,9 +58,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
 import com.apex.files.data.fs.DateFormatter
+import com.apex.files.data.fs.Paths
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
+import com.apex.files.data.model.Location
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.NodeOpener
@@ -98,8 +100,8 @@ fun HomeScreen() {
     fun openFavorite(node: FileNode) {
         if (node.isDir) {
             container.recents.record(node)
-            val location = node.uri?.let { com.apex.files.data.model.Location.Saf(it, node.name) }
-                ?: com.apex.files.data.model.Location.Fs(File(node.path))
+            val location = node.uri?.let { Location.Saf(it, node.name) }
+                ?: Location.Fs(File(node.path))
             navigator.push(Screen.Explorer(location))
         } else {
             NodeOpener.open(node, container, navigator, context) { msg ->
@@ -206,7 +208,7 @@ fun HomeScreen() {
                 ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) },
                 ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) },
                 ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
-                    navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot())))
+                    navigator.push(Screen.SpaceAnalyzer(Location.Fs(Paths.internalRoot())))
                 },
             ) }
             Column(

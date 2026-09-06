@@ -31,15 +31,19 @@ class CategoryViewModel(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(loading = true) }
-            val nodes = if (category.isMediaCollection) {
-                container.mediaStore.list(category)
-            } else {
-                container.index.search(
-                    query = "",
-                    category = category,
-                    limit = 2000,
-                )
-            }
+            // Fallback: a revoked permission or a flaky provider must never
+            // leave the grid stuck on the spinner.
+            val nodes = runCatching {
+                if (category.isMediaCollection) {
+                    container.mediaStore.list(category)
+                } else {
+                    container.index.search(
+                        query = "",
+                        category = category,
+                        limit = 2000,
+                    )
+                }
+            }.getOrDefault(emptyList())
             _state.update { it.copy(nodes = nodes, loading = false) }
         }
     }

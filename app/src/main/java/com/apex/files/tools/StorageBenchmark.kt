@@ -13,6 +13,7 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 import java.util.Random
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -76,7 +77,7 @@ class StorageBenchmark(private val context: Context, private val fs: FsRepositor
         output.use { out ->
             var written = 0L
             while (written < payload) {
-                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                currentCoroutineContext().ensureActive()
                 val n = minOf(chunk.size.toLong(), payload - written).toInt()
                 out.write(chunk, 0, n)
                 written += n
@@ -94,7 +95,7 @@ class StorageBenchmark(private val context: Context, private val fs: FsRepositor
         input.use { inn ->
             var total = 0L
             while (total < payload) {
-                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                currentCoroutineContext().ensureActive()
                 val read = inn.read(chunk)
                 if (read < 0) break
                 total += read

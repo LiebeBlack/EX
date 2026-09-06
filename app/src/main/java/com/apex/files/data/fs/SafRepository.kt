@@ -15,6 +15,7 @@ import com.apex.files.data.model.SortOrder
 import java.io.InputStream
 import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
@@ -168,7 +169,7 @@ class SafRepository(private val context: Context) {
         acc: OpAccumulator,
         onConflict: (suspend (Conflict) -> ConflictDecision)?,
     ) {
-        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        currentCoroutineContext().ensureActive()
         if (src.isDirectory) {
             val dest = createOrResolveDir(destDir, src.name ?: "carpeta", acc, onConflict) ?: return
             for (c in src.listFiles()) copyRecursive(c, dest, sink, total, acc, onConflict)
@@ -453,7 +454,7 @@ class SafRepository(private val context: Context) {
             src.use { input ->
                 dest.use { output ->
                     while (true) {
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        currentCoroutineContext().ensureActive()
                         val read = input.read(buffer)
                         if (read < 0) break
                         if (read > 0) {

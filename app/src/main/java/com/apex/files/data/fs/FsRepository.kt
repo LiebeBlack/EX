@@ -17,6 +17,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.charset.Charset
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -761,7 +762,7 @@ class FsRepository(private val context: Context) {
     suspend fun saveText(
         node: FileNode,
         content: String,
-        charset: java.nio.charset.Charset,
+        charset: Charset,
     ): Boolean = withContext(Dispatchers.IO) {
         val out = openOutputStream(node) ?: return@withContext false
         try {
