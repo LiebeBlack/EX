@@ -4,6 +4,20 @@
 (function () {
   "use strict";
 
+  /* ------------------------------------------------------------ utilities */
+
+  function isVisible(el) {
+    if (!el) return false;
+    var rect = el.getBoundingClientRect();
+    return rect.top < window.innerHeight && rect.bottom > 0 && rect.width > 0 && rect.height > 0;
+  }
+
+  function setHidden(el, hidden) {
+    if (!el) return;
+    if (hidden) el.setAttribute("hidden", "");
+    else el.removeAttribute("hidden");
+  }
+
   /* ------------------------------------------------------------ theme */
 
   var THEME_KEY = "apex-docs-theme";
@@ -40,12 +54,31 @@
   /* ------------------------------------------------------- version log */
   /* Most recent first. Source: git history of LiebeBlack/EX. */
 
+  var vlist = document.getElementById("version-list");
+  var versionNote = document.getElementById("version-note");
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function orderedByDate(a, b) {
+    var da = a.date ? new Date(a.date).getTime() : 0;
+    var db = b.date ? new Date(b.date).getTime() : 0;
+    if (da !== db) return db - da;
+    if (a.ref && b.ref) return String(a.ref).localeCompare(String(b.ref));
+    return 0;
+  }
+
   var VERSIONS = [
     {
       tag: "v1.0.x",
-      what: "Revisión integral: seguridad de datos, conflictos y reproductor de audio",
-      date: "2026-09-04",
-      ref: "local · working tree",
+      what: "Revisión integral: seguridad de datos, conflictos, audio y documentación",
+      date: "2026-09-06",
+      ref: "local · docs/",
       body: [
         "Protección anti-recursión al copiar/mover una carpeta dentro de sí misma, en acceso total y SAF.",
         "Transferencias mixtas File ⇄ SAF y movimiento seguro: el origen solo se borra si la copia terminó sin errores.",
@@ -53,7 +86,8 @@
         "Las operaciones informan resultados reales (archivos, omitidos y errores) y las selecciones de copiar/mover ya no se pierden al navegar al destino.",
         "Nuevo reproductor de audio OLED en primer plano, búsqueda de texto dentro de los visores y sugerencias de archivos grandes en Inicio.",
         "Orden ascendente/descendente persistido, selección por rango, acceso rápido a ocultos, “Abrir con…”, raíz seleccionable en herramientas y paleta de acento personalizada.",
-        "Nueva pantalla “Acerca de”, soporte del acceso parcial a fotos de Android 14+ y nuevos tests unitarios."
+        "Nueva pantalla “Acerca de”, soporte del acceso parcial a fotos de Android 14+ y nuevos tests unitarios.",
+        "Documentación técnica renovada: tono editorial, secciones de búsqueda semántica/OCR y limpieza inteligente, y página de descargas actualizada."
       ]
     },
     {
@@ -104,31 +138,6 @@
     }
   ];
 
-  var vlist = document.getElementById("version-list");
-
-  function renderVersions() {
-    if (!vlist) return;
-    var html = "";
-    for (var i = 0; i < VERSIONS.length; i++) {
-      var v = VERSIONS[i];
-      var bullets = "";
-      for (var b = 0; b < v.body.length; b++) {
-        bullets += "<li>" + v.body[b] + "</li>";
-      }
-      html +=
-        '<details class="vitem"' + (i === 0 ? ' open' : '') + ">" +
-          "<summary>" +
-            '<span class="vtag">' + v.tag + "</span>" +
-            '<span class="vwhat">' + v.what + "</span>" +
-            '<span class="vmeta">' + v.date + " · " + v.ref + "</span>" +
-          "</summary>" +
-          '<div class="vbody"><ul>' + bullets + "</ul></div>" +
-        "</details>";
-    }
-    vlist.innerHTML = html;
-  }
-
-  renderVersions();
 
   /* ------------------------------------------------------ ABI builder */
 
@@ -155,6 +164,22 @@
 
   if (abiSelect) abiSelect.addEventListener("change", updateArtifact);
   updateArtifact();
+
+  /* ------------------------------------------------------ performance hints */
+
+  if (vlist) {
+    var details = vlist.querySelectorAll("details");
+    details.forEach(function (d, index) {
+      d.setAttribute("data-index", String(index));
+    });
+  }
+
+  if ("loading" in HTMLLinkElement.prototype && /https?:\/\//.test(location.href)) {
+    var scripts = document.querySelectorAll("script[src]");
+    scripts.forEach(function (s) {
+      if (s.getAttribute("defer")) s.setAttribute("loading", "lazy");
+    });
+  }
 
   /* ------------------------------------------------------------ copy */
 

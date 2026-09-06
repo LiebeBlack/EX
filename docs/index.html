@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>APEX File Manager — Documentación</title>
-<meta name="description" content="Documentación técnica de APEX File Manager: descripción, funcionalidades, tecnologías, arquitectura, versiones y descargas.">
+<title>APEX File Manager — Documentación</title>    <meta name="description" content="Documentación técnica de APEX File Manager: interfaz Dark OLED, navegación perezosa, herramientas algorítmicas, visores integrados, búsqueda semántica y OCR opcionales, y más.">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -19,19 +18,32 @@
   </div>
 </header>
 
+<div class="shell technology-strip">
+  <span class="eyebrow">Tecnología del repositorio</span>
+  <ul class="facts" aria-label="Pilares tecnológicos">
+    <li>Kotlin&nbsp;2.1.20 + Jetpack&nbsp;Compose</li>
+    <li>minSdk&nbsp;26 · targetSdk&nbsp;35</li>
+    <li>Sin permiso INTERNET</li>
+    <li>Sin red · sin servidor ni telemetría</li>
+    <li>Limpieza inteligente · carpetas inteligentes · análisis profundo de APK</li>
+  </ul>
+</div>
+
 <main id="inicio" class="shell">
 
   <section class="hero">
     <p class="eyebrow">Documentación técnica — v1.0</p>
     <h1>APEX File&nbsp;Manager</h1>
-    <p class="lede">Gestor de archivos para Android. Interfaz OLED oscura, rendimiento de lista
-      perezosa, herramientas de limpieza 100&nbsp;% algorítmicas y visores integrados.
-      Sin red. Sin servidor ni telemetría. Cien por cien local. Opcional: búsqueda semántica y OCR 100% en el dispositivo, desactivado por defecto.</p>
+    <p class="lede">Gestor de archivos para Android. Interfaz <strong>Dark&nbsp;OLED</strong>, rendimiento
+      de lista perezosa, herramientas de limpieza 100&nbsp;% algorítmicas y visores
+      integrados. Sin red. Sin servidor ni telemetría. Cien por cien local. Opcional:
+      búsqueda semántica y OCR 100&nbsp;% en el dispositivo, desactivado por defecto.</p>
     <ul class="facts" aria-label="Hechos clave">
       <li>Kotlin&nbsp;2.1.20 + Jetpack&nbsp;Compose</li>
       <li>minSdk&nbsp;26 · targetSdk&nbsp;35</li>
       <li>Sin permiso INTERNET</li>
       <li>Sin red · sin servidor ni telemetría</li>
+      <li>Limpieza inteligente · carpetas inteligentes · análisis profundo de APK</li>
     </ul>
   </section>
 
@@ -63,6 +75,7 @@
       <li><strong>Sin segundo plano.</strong> No hay servicios, ni <code>WorkManager</code>, ni
         receptores: el consumo de batería en reposo es nulo.</li>
       <li><strong>Sin red ni telemetría.</strong> Sin permiso <code>INTERNET</code>, sin servidor y sin envío de datos externos; todo se ejecuta sobre el almacenamiento local.</li>
+      <li><strong>Operaciones en paralelo y sin consumo de batería en reposo.</strong> Copia/movido con 4 trabajadores, rescan de MediaStore y búsqueda de duplicados en dos fases (tamaño exacto + <code>SHA-256</code>).</li>
     </ul>
   </section>
 
@@ -127,7 +140,8 @@
         temporales; borrado solo con confirmación y respetando la Papelera.</li>
       <li>Categorización por extensiones con expresiones regulares precompiladas.</li>
       <li><strong>Copiado/movido en paralelo</strong> (4 trabajadores) con rescan automático de
-        MediaStore y colección <code>Descargas</code> (API 29+).</li>
+        MediaStore y colección <code>Descargas</code> (API 29+), y resolución interactiva de
+        conflictos de nombre (sobrescribir, omitir, conservar ambos, cancelar).</li>
       <li>Detección de duplicados en dos fases: agrupación por tamaño exacto y
         <code>SHA-256</code> solo sobre los grupos coincidentes.</li>
       <li>Toda la E/S en <code>Dispatchers.IO</code>; estado por <code>StateFlow</code> y progreso
@@ -161,6 +175,15 @@
       extracción de icono y XML decodificado navegable — todo sin <code>PackageManager</code>.
       <strong>Analizador Wi-Fi</strong> local: estado de conexión, velocidad de enlace y teórica,
       calidad de señal y dispositivos de la red (tabla ARP), sin usar Internet.</p>
+
+    <h3>Búsqueda semántica, OCR y carpetas inteligentes (opcional)</h3>
+    <p>El módulo opcional (interruptor en Ajustes, <strong>OFF por defecto</strong>, 100&nbsp;% local)
+      añade indexado de contenido, OCR on-device y auto-categorización: indexa texto plano,
+      imágenes y PDFs escaneados con <code>ML Kit</code> y <code>pdfbox-android</code>, permite
+      búsquedas por frases naturales y sinónimos español/inglés, y agrupa archivos en carpetas
+      virtuales (Comprobantes, Trabajo, Código, Temporales…). La <strong>Limpieza Inteligente</strong>
+      detecta huérfanos de apps desinstaladas, cachés y temporales, siempre con confirmación del
+      usuario y respetando la Papelera.</p>
   </section>
 
   <section id="tecnologia" class="section">
@@ -219,16 +242,20 @@
     <h2>Historial y esquema de versionado</h2>
     <p>Cada publicación se etiqueta automáticamente como <code>v1.0.&lt;n&gt;</code>, donde
       <code>&lt;n&gt;</code> es el número de ejecución del pipeline de GitHub Actions sobre
-      <code>main</code>. Las notas de cada release se generan desde <code>git log</code>.</p>
+      <code>main</code>. Las notas de cada release se generan desde <code>git log</code>, y el
+      despliegue depende del resultado del pipeline de <em>Code Quality</em>: solo compila si las
+      pruebas y el análisis completos pasan.</p>
 
     <div id="version-list" class="vlist" aria-live="polite"></div>
 
     <p class="note" id="version-note"></p>
+    <p class="note">La documentación técnica se actualiza junto con el código fuente; si
+      encuentra una sección desactualizada, abra una incidencia en el repositorio.</p>
   </section>
 
   <section id="descargas" class="section">
     <p class="eyebrow">06 · Descargas e instalación</p>
-    <h2>Obtener la aplicación</h2>
+    <h2>Obtener y compilar la aplicación</h2>
     <p>Todas las publicaciones se alojan en GitHub Releases. Cada versión incluye un APK por
       arquitectura, un APK universal y el fichero <code>SHA256SUMS.txt</code> con los checksums.</p>
 
