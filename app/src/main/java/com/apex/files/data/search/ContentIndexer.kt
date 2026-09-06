@@ -63,7 +63,7 @@ class ContentIndexer(
         ChunkResult(processed, more = processed < candidates.size)
     }
 
-/** Indexes everything pending in one walk (user-triggered "Reindexar"). */
+    /** Indexes everything pending in one walk (user-triggered "Reindexar"). */
     suspend fun indexAll(showHidden: Boolean, ocrEnabled: Boolean) = withContext(Dispatchers.IO) {
         val candidates = collectCandidates(showHidden)
         var processed = 0

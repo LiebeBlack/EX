@@ -18,8 +18,7 @@ import kotlinx.coroutines.flow.flowOn
  *
  *  - **Orphan app data**: `/Android/data/<pkg>` and `/Android/obb/<pkg>`
  *    where the package is no longer installed (compared with PackageManager).
- *  - **Caches**: `/Android/data/<pkg>/cache` (and `/Android/obb` itself) of
- *    installed or orphaned apps.
+ *  - **Caches**: `/Android/data/<pkg>/cache` of installed apps.
  *  - **Temporales**: `*.tmp`, `*.part`, `*.crdownload`, `*.download` under
  *    the internal root (shallow, hidden/excluded dirs skipped).
  *
