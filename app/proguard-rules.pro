@@ -7,3 +7,8 @@
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
     public <init>(...);
 }
+
+# pdfbox-android: reflection-based text/rendering engine, needs its classes kept.
+-keep class org.apache.pdfbox.** { *; }
+-dontwarn org.apache.pdfbox.**
+-dontwarn org.bouncycastle.**

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.data.fs.SearchFilters
 import com.apex.files.data.model.FileNode
+import com.apex.files.data.search.SemanticSearch
+import com.apex.files.data.search.SmartGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.withContext
@@ -22,9 +24,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val sizeBand: SearchFilters.SizeBand? = null,
         val dateRange: SearchFilters.DateRange? = null,
         val extFilter: String = "",
+        val smartGroup: SmartGroup? = null,
         val results: List<FileNode> = emptyList(),
         val searching: Boolean = false,
         val indexed: Int = 0,
+        val semantic: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState(indexed = container.index.size))
@@ -39,11 +43,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 performSearch()
             }
         }
-        // Make sure the index is usable: restore the persisted snapshot or,
-        // when none exists, build it once and persist it for next time.
+        val semantic = container.settings.semanticSearchEnabled.value
         viewModelScope.launch {
-            if (container.index.size == 0) {
-                withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
+                // Make sure the index is usable: restore the persisted snapshot or,
+                // when none exists, build it once and persist it for next time.
+                if (container.index.size == 0) {
                     val cached = container.indexStore.load()
                     if (cached != null) {
                         container.index.restore(cached)
@@ -52,8 +57,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                         container.indexStore.save(container.index.allFiles())
                     }
                 }
+                if (semantic) container.contentIndex.load()
             }
-            _state.update { it.copy(indexed = container.index.size) }
+            _state.update { it.copy(indexed = container.index.size, semantic = semantic) }
+            performSearch()
         }
     }
 
@@ -82,12 +89,28 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         rerun()
     }
 
+    fun toggleSmartGroup(group: SmartGroup) {
+        _state.update {
+            it.copy(smartGroup = if (it.smartGroup == group) null else group)
+        }
+        rerun()
+    }
+
     fun refreshIndex() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 container.index.rebuild(container.settings.showHidden.value)
                 // Persist the fresh index so future cold starts skip the scan.
                 container.indexStore.save(container.index.allFiles())
+                // The explicit "Reindexar" also rebuilds the content index
+                // (OCR + PDF text) when the semantic module is enabled.
+                if (_state.value.semantic) {
+                    container.contentIndex.load()
+                    container.contentIndexer.indexAll(
+                        showHidden = container.settings.showHidden.value,
+                        ocrEnabled = container.settings.ocrEnabled.value,
+                    )
+                }
             }
             _state.update { it.copy(indexed = container.index.size) }
             performSearch()
@@ -104,13 +127,26 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 else -> "*.$w"
             }
         }
-        val results = container.index.search(
-            query = s.query,
-            sizeBand = s.sizeBand,
-            dateRange = s.dateRange,
-            extFilter = wildcard,
-            limit = 400,
-        )
+        val results = if (s.semantic) {
+            SemanticSearch.search(
+                index = container.index,
+                textOf = container.contentIndex::textOf,
+                query = s.query,
+                sizeBand = s.sizeBand,
+                dateRange = s.dateRange,
+                extFilter = wildcard,
+                smartGroup = s.smartGroup,
+                limit = 400,
+            )
+        } else {
+            container.index.search(
+                query = s.query,
+                sizeBand = s.sizeBand,
+                dateRange = s.dateRange,
+                extFilter = wildcard,
+                limit = 400,
+            )
+        }
         _state.update { it.copy(results = results, searching = false, indexed = container.index.size) }
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.SettingsBackupRestore
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.SwapVert
@@ -88,6 +89,9 @@ fun SettingsScreen() {
     val sortOrder by vm.sortOrder.collectAsStateWithLifecycle()
     val density by vm.density.collectAsStateWithLifecycle()
     val confirmPermanentDelete by vm.confirmPermanentDelete.collectAsStateWithLifecycle()
+    val semanticSearchEnabled by vm.semanticSearchEnabled.collectAsStateWithLifecycle()
+    val ocrEnabled by vm.ocrEnabled.collectAsStateWithLifecycle()
+    val smartGroupsEnabled by vm.smartGroupsEnabled.collectAsStateWithLifecycle()
 
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
@@ -238,6 +242,90 @@ fun SettingsScreen() {
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                     )
+                }
+            }
+
+            // Optional semantic module: OCR + natural-language search
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Psychology, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Búsqueda semántica y OCR", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (semanticSearchEnabled) {
+                                "Indexa el contenido de imágenes y PDFs en el dispositivo y busca por frases"
+                            } else {
+                                "OFF: búsqueda por nombre como siempre; no se indexa contenido"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = semanticSearchEnabled,
+                        onCheckedChange = vm::setSemanticSearchEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = ApexBorder,
+                            uncheckedBorderColor = ApexBorder,
+                        ),
+                    )
+                }
+                if (semanticSearchEnabled) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "100% local (sin Internet). Añade ~20-30 MB al APK y ocupa batería solo mientras indexa. " +
+                            "El índice se construye por bloques en segundo plano y solo re-procesa archivos modificados.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("OCR de imágenes y PDFs escaneados", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Reconoce texto en capturas, recibos y documentos escaneados",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = ocrEnabled,
+                            onCheckedChange = vm::setOcrEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Carpetas inteligentes", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Grupos virtuales por contenido (comprobantes, trabajo, código…)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = smartGroupsEnabled,
+                            onCheckedChange = vm::setSmartGroupsEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
                 }
             }
 

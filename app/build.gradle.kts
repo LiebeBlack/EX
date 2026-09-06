@@ -123,5 +123,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.androidx.documentfile)
+    // Optional on-device content search module (gated by a Settings toggle):
+    // OCR (bundled Latin model, works without Play Services) + PDF text layer.
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.pdfbox.android)
     testImplementation(libs.junit)
 }

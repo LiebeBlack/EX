@@ -24,6 +24,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val viewMode: StateFlow<ViewMode> = container.settings.viewMode
     val density: StateFlow<ListDensity> = container.settings.density
     val confirmPermanentDelete: StateFlow<Boolean> = container.settings.confirmPermanentDelete
+    val semanticSearchEnabled: StateFlow<Boolean> = container.settings.semanticSearchEnabled
+    val ocrEnabled: StateFlow<Boolean> = container.settings.ocrEnabled
+    val smartGroupsEnabled: StateFlow<Boolean> = container.settings.smartGroupsEnabled
 
     fun setAccent(accent: Accent) = container.settings.setAccent(accent)
 
@@ -42,6 +45,12 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun setDensity(density: ListDensity) = container.settings.setDensity(density)
 
     fun setConfirmPermanentDelete(enabled: Boolean) = container.settings.setConfirmPermanentDelete(enabled)
+
+    fun setSemanticSearchEnabled(enabled: Boolean) = container.settings.setSemanticSearchEnabled(enabled)
+
+    fun setOcrEnabled(enabled: Boolean) = container.settings.setOcrEnabled(enabled)
+
+    fun setSmartGroupsEnabled(enabled: Boolean) = container.settings.setSmartGroupsEnabled(enabled)
 
     fun resetSettings() = container.settings.resetAll()
 

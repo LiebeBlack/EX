@@ -90,6 +90,22 @@ class SettingsRepository(context: Context) {
     private val _confirmPermanentDelete = MutableStateFlow(prefs.getBoolean(KEY_CONFIRM_PERMANENT_DELETE, true))
     val confirmPermanentDelete: StateFlow<Boolean> = _confirmPermanentDelete.asStateFlow()
 
+    /**
+     * Master switch of the optional semantic module: on-device OCR indexing,
+     * natural-language search, smart groups and the junk analyzer. OFF by
+     * default so the extra APK weight and background indexing stay opt-in.
+     */
+    private val _semanticSearchEnabled = MutableStateFlow(prefs.getBoolean(KEY_SEMANTIC_SEARCH, false))
+    val semanticSearchEnabled: StateFlow<Boolean> = _semanticSearchEnabled.asStateFlow()
+
+    /** Sub-switch: index image/PDF text (OCR) when the master is enabled. */
+    private val _ocrEnabled = MutableStateFlow(prefs.getBoolean(KEY_OCR_ENABLED, true))
+    val ocrEnabled: StateFlow<Boolean> = _ocrEnabled.asStateFlow()
+
+    /** Sub-switch: "Carpetas inteligentes" row and screen on Home. */
+    private val _smartGroupsEnabled = MutableStateFlow(prefs.getBoolean(KEY_SMART_GROUPS, true))
+    val smartGroupsEnabled: StateFlow<Boolean> = _smartGroupsEnabled.asStateFlow()
+
     fun setAccent(accent: Accent) {
         prefs.edit().putString(KEY_ACCENT, accent.name).apply()
         _accent.value = accent
@@ -137,6 +153,21 @@ class SettingsRepository(context: Context) {
         _confirmPermanentDelete.value = enabled
     }
 
+    fun setSemanticSearchEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SEMANTIC_SEARCH, enabled).apply()
+        _semanticSearchEnabled.value = enabled
+    }
+
+    fun setOcrEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_OCR_ENABLED, enabled).apply()
+        _ocrEnabled.value = enabled
+    }
+
+    fun setSmartGroupsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SMART_GROUPS, enabled).apply()
+        _smartGroupsEnabled.value = enabled
+    }
+
     /** Restores every setting to its default value. */
     fun resetAll() {
         val edit = prefs.edit()
@@ -149,6 +180,9 @@ class SettingsRepository(context: Context) {
         edit.remove(KEY_TRASH_ENABLED)
         edit.remove(KEY_DENSITY)
         edit.remove(KEY_CONFIRM_PERMANENT_DELETE)
+        edit.remove(KEY_SEMANTIC_SEARCH)
+        edit.remove(KEY_OCR_ENABLED)
+        edit.remove(KEY_SMART_GROUPS)
         edit.apply()
         // Reflect the defaults in memory immediately.
         _accent.value = Accent.fromName(prefs.getString(KEY_ACCENT, null))
@@ -160,6 +194,9 @@ class SettingsRepository(context: Context) {
         _trashEnabled.value = prefs.getBoolean(KEY_TRASH_ENABLED, true)
         _density.value = ListDensity.fromName(prefs.getString(KEY_DENSITY, null))
         _confirmPermanentDelete.value = prefs.getBoolean(KEY_CONFIRM_PERMANENT_DELETE, true)
+        _semanticSearchEnabled.value = prefs.getBoolean(KEY_SEMANTIC_SEARCH, false)
+        _ocrEnabled.value = prefs.getBoolean(KEY_OCR_ENABLED, true)
+        _smartGroupsEnabled.value = prefs.getBoolean(KEY_SMART_GROUPS, true)
     }
 
     private companion object {
@@ -172,5 +209,8 @@ class SettingsRepository(context: Context) {
         const val KEY_TRASH_ENABLED = "trash_enabled"
         const val KEY_DENSITY = "list_density"
         const val KEY_CONFIRM_PERMANENT_DELETE = "confirm_permanent_delete"
+        const val KEY_SEMANTIC_SEARCH = "semantic_search_enabled"
+        const val KEY_OCR_ENABLED = "ocr_enabled"
+        const val KEY_SMART_GROUPS = "smart_groups_enabled"
     }
 }

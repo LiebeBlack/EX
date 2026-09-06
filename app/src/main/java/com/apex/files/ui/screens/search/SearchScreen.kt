@@ -46,6 +46,7 @@ import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.SearchFilters
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
+import com.apex.files.data.search.SmartGroup
 import com.apex.files.data.model.FileNode
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
@@ -84,6 +85,10 @@ fun SearchScreen() {
             SearchField(state, vm)
             Spacer(Modifier.height(8.dp))
             FilterRow(state, vm)
+            if (state.semantic) {
+                Spacer(Modifier.height(6.dp))
+                SmartGroupRow(state, vm)
+            }
         }
 
         LazyColumn(
@@ -257,6 +262,20 @@ private fun FilterRow(state: SearchViewModel.UiState, vm: SearchViewModel) {
                     ) { extFocus.requestFocus() }
                     .focusRequester(extFocus)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+/** Content-group chips (only in semantic mode): filter by smart category. */
+@Composable
+private fun SmartGroupRow(state: SearchViewModel.UiState, vm: SearchViewModel) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        SmartGroup.entries.forEach { group ->
+            FilterChip(
+                group.chipLabel,
+                active = state.smartGroup == group,
+                onClick = { vm.toggleSmartGroup(group) },
             )
         }
     }

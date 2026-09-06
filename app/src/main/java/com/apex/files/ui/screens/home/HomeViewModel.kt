@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.model.Category
+import com.apex.files.data.search.ContentIndexer
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.storage.DrivesRepository
 import com.apex.files.data.storage.StorageStats
@@ -68,6 +69,22 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }.getOrNull()?.let { (volumes, total, used) ->
                 _state.update { it.copy(totalBytes = total, usedBytes = used, drives = volumes) }
+            }
+        }
+
+        // Optional semantic module: restore the persisted content index and
+        // process one bounded chunk of pending files (OCR/PDF/plain text) in
+        // the background, so indexing never blocks the Home screen.
+        if (container.settings.semanticSearchEnabled.value) {
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) {
+                    container.contentIndex.load()
+                    container.contentIndexer.indexChunk(
+                        maxFiles = ContentIndexer.DEFAULT_CHUNK,
+                        showHidden = container.settings.showHidden.value,
+                        ocrEnabled = container.settings.ocrEnabled.value,
+                    )
+                }
             }
         }
 

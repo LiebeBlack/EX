@@ -14,10 +14,15 @@ import com.apex.files.data.fs.Paths
 import com.apex.files.data.fs.SqliteRepository
 import com.apex.files.data.fs.TrashManager
 import com.apex.files.data.media.MediaStoreRepository
+import com.apex.files.data.search.ContentIndex
+import com.apex.files.data.search.ContentIndexer
+import com.apex.files.data.search.OcrEngine
+import com.apex.files.data.search.PdfTextExtractor
 import com.apex.files.data.storage.DrivesRepository
 import com.apex.files.tools.ApkScanner
 import com.apex.files.tools.DuplicateFinder
 import com.apex.files.tools.EmptyCleaner
+import com.apex.files.tools.JunkAnalyzer
 import com.apex.files.tools.SpaceAnalyzer
 import com.apex.files.tools.StorageBenchmark
 import java.io.File
@@ -72,7 +77,14 @@ class AppContainer(context: Context) {
         return Paths.internalRoot()
     }
 
+    // Optional semantic module (gated by Settings.semanticSearchEnabled).
+    val contentIndex: ContentIndex by lazy { ContentIndex(appContext) }
+    val ocr: OcrEngine by lazy { OcrEngine(appContext) }
+    val pdfText: PdfTextExtractor by lazy { PdfTextExtractor(ocr) }
+    val contentIndexer: ContentIndexer by lazy { ContentIndexer(contentIndex, ocr, pdfText) }
+
     // Algorithmic tools (100% local, zero dependencies).
+    val junkAnalyzer: JunkAnalyzer by lazy { JunkAnalyzer(appContext) }
     val archive: ArchiveRepository by lazy { ArchiveRepository(appContext, fs) }
     val cleaner: EmptyCleaner by lazy { EmptyCleaner(fs) }
     val duplicateFinder: DuplicateFinder by lazy { DuplicateFinder(fs) }
