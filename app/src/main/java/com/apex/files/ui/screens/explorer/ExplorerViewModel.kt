@@ -110,22 +110,25 @@ class ExplorerViewModel(
     // ------------------------------------------------------------ browsing
 
     private var refreshJob: Job? = null
+    private var refreshGeneration = 0
 
     fun refresh() {
         val cur = _state.value.current ?: return
-        // Cancel the in-flight listing so a slow read of a previous folder
-        // can never overwrite the entries of the folder the user is seeing.
+        // Cancel the in-flight listing and bump a generation counter so a
+        // slow read of a previous folder can never overwrite the entries of
+        // the folder the user is currently seeing.
         refreshJob?.cancel()
+        val gen = ++refreshGeneration
         refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             val s = _state.value
             val entries = try {
                 container.fs.list(cur, s.showHidden, s.sort, s.sortDir)
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message ?: "Error") }
+                if (gen == refreshGeneration) _state.update { it.copy(error = e.message ?: "Error") }
                 emptyList()
             }
-            _state.update { it.copy(entries = entries, loading = false) }
+            if (gen == refreshGeneration) _state.update { it.copy(entries = entries, loading = false) }
         }
     }
 

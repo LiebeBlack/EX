@@ -41,6 +41,7 @@ class WifiViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     private var refreshJob: Job? = null
+    private var generation = 0
 
     init {
         refresh()
@@ -55,6 +56,7 @@ class WifiViewModel(private val container: AppContainer) : ViewModel() {
 
     fun refresh() {
         refreshJob?.cancel()
+        val gen = ++generation
         refreshJob = viewModelScope.launch(Dispatchers.IO) {
             val missing = !repo.hasScanPermission
             val enabled = repo.isEnabled
@@ -80,6 +82,7 @@ class WifiViewModel(private val container: AppContainer) : ViewModel() {
                 if (networks.isNotEmpty()) break
             }
             val devices = repo.connectedDevices()
+            if (gen != generation) return@launch
             _state.update {
                 it.copy(
                     scanning = false,
