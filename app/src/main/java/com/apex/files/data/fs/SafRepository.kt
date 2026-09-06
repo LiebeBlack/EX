@@ -291,10 +291,16 @@ class SafRepository(private val context: Context) {
         val parent = srcDoc.parentFile
         val sameParent = parent != null && parent.uri == destDoc.uri
         if (sameParent) {
-            val existing = destDoc.findFile(src.name.orEmpty())
             val name = src.name ?: return@withContext OpResult().recordError("Nombre desconocido")
-            if (existing == null || existing.uri == srcDoc.uri) {
-                if (existing == null && srcDoc.renameTo(name)) {
+            val existing = destDoc.findFile(name)
+            // The destination entry IS the source document: already in place,
+            // treat it as a no-op instead of re-copying onto itself.
+            if (existing != null && existing.uri == srcDoc.uri) {
+                sinkDone(OpType.MOVE, onProgress, 1)
+                return@withContext OpResult(filesDone = 1)
+            }
+            if (existing == null) {
+                if (srcDoc.renameTo(name)) {
                     sinkDone(OpType.MOVE, onProgress, 1)
                     return@withContext OpResult(filesDone = 1)
                 }

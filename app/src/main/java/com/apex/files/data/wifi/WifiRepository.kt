@@ -66,8 +66,8 @@ class WifiRepository(context: Context) {
             standardLabel = standardLabel,
             signalPercent = signalPercent(rssi),
             signalLevel = WifiManager.calculateSignalLevel(rssi, 5),
-            ipAddress = dhcp?.ipAddress?.let(::intToIp),
-            gateway = dhcp?.gateway?.let(::intToIp),
+            ipAddress = dhcp?.ipAddress?.takeIf { it != 0 }?.let(::intToIp),
+            gateway = dhcp?.gateway?.takeIf { it != 0 }?.let(::intToIp),
             efficiencyPercent = if (theoretical > 0) {
                 ((info.linkSpeed.toFloat() / theoretical) * 100).toInt().coerceIn(0, 100)
             } else 0,
@@ -121,7 +121,8 @@ class WifiRepository(context: Context) {
      * empty and the UI explains the limitation. Never touches the network.
      */
     fun connectedDevices(): List<LanDevice> {
-        val gateway = runCatching { wifi.dhcpInfo }.getOrNull()?.gateway?.let(::intToIp)
+        val gateway = runCatching { wifi.dhcpInfo }.getOrNull()?.gateway
+            ?.takeIf { it != 0 }?.let(::intToIp)
         val lines = try {
             val f = File("/proc/net/arp")
             if (!f.canRead()) return emptyList()

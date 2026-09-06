@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.InsertDriveFile
-import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -199,12 +198,6 @@ private fun TrashRow(
                     },
                 )
             }
-            ApexIconButton(
-                Icons.Outlined.Restore,
-                "Restaurar",
-                tint = MaterialTheme.colorScheme.primary,
-                onClick = onRestore,
-            )
             ApexIconButton(
                 Icons.Outlined.DeleteForever,
                 "Eliminar definitivamente",

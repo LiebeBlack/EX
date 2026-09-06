@@ -131,7 +131,7 @@ fun SettingsScreen() {
                 }
             }
 
-            // Sort direction (default ordering for the Explorer)
+            // Default sort: criterion + direction (applied when opening a folder)
             ApexCard(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.SwapVert, null, tint = MaterialTheme.colorScheme.primary)
@@ -139,13 +139,31 @@ fun SettingsScreen() {
                     Column(Modifier.weight(1f)) {
                         Text("Orden por defecto", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Las carpetas siempre aparecen primero",
+                            "Criterio y dirección al abrir una carpeta",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
+                Text(
+                    "Criterio",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DirectionChip("Nombre", sortOrder == SortOrder.NAME) { vm.setSortOrder(SortOrder.NAME) }
+                    DirectionChip("Tamaño", sortOrder == SortOrder.SIZE) { vm.setSortOrder(SortOrder.SIZE) }
+                    DirectionChip("Fecha", sortOrder == SortOrder.DATE) { vm.setSortOrder(SortOrder.DATE) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Dirección",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DirectionChip("Ascendente", sortDirection == SortDirection.ASC) { vm.setSortDirection(SortDirection.ASC) }
                     DirectionChip("Descendente", sortDirection == SortDirection.DESC) { vm.setSortDirection(SortDirection.DESC) }
@@ -269,28 +287,6 @@ fun SettingsScreen() {
                         style = MonoTextStyleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-            }
-
-            // Default sort order
-            ApexCard(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.SwapVert, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Orden por defecto", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Criterio aplicado al abrir una carpeta",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DirectionChip("Nombre", sortOrder == SortOrder.NAME) { vm.setSortOrder(SortOrder.NAME) }
-                    DirectionChip("Tamaño", sortOrder == SortOrder.SIZE) { vm.setSortOrder(SortOrder.SIZE) }
-                    DirectionChip("Fecha", sortOrder == SortOrder.DATE) { vm.setSortOrder(SortOrder.DATE) }
                 }
             }
 

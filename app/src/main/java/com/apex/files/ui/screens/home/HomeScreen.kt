@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Refresh
@@ -67,8 +68,10 @@ import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
 import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.FileIcon
+import com.apex.files.ui.components.HelpSheet
 import com.apex.files.ui.components.StorageBar
 import com.apex.files.ui.components.WelcomeTour
+import com.apex.files.ui.helpTips
 import com.apex.files.ui.theme.ApexTextMuted
 import com.apex.files.ui.theme.MonoTextStyleSmall
 import java.io.File
@@ -90,6 +93,7 @@ fun HomeScreen() {
     // First run: show the welcome tour once (replayable from Ajustes).
     val onboarding = container.onboarding
     var showTour by remember { mutableStateOf(!onboarding.tourSeen) }
+    var showHelp by remember { mutableStateOf(false) }
 
     fun openFavorite(node: FileNode) {
         if (node.isDir) {
@@ -128,6 +132,7 @@ fun HomeScreen() {
                 }
                 ApexIconButton(Icons.Outlined.Search, "Buscar") { navigator.push(Screen.Search()) }
                 ApexIconButton(Icons.Outlined.Refresh, "Actualizar") { vm.refresh() }
+                ApexIconButton(Icons.Outlined.HelpOutline, "Ayuda de esta pantalla") { showHelp = true }
                 ApexIconButton(Icons.Outlined.Settings, "Ajustes") { navigator.push(Screen.Settings) }
             }
         }
@@ -372,6 +377,11 @@ fun HomeScreen() {
             showTour = false
             onboarding.markTourSeen()
         })
+    }
+    if (showHelp) {
+        helpTips(Screen.Home)?.let { tips ->
+            HelpSheet(tips = tips, onDismiss = { showHelp = false })
+        }
     }
 }
 

@@ -99,7 +99,9 @@ fun WifiScreen() {
             if (state.scanning) {
                 item { NeonProgressBar(progress = null, modifier = Modifier.fillMaxWidth()) }
             }
-            items(state.networks, key = { it.bssid.ifBlank { it.ssid } }) { network ->
+            // Index-based keys: BSSIDs can be blank on some devices and two
+            // entries could otherwise collide (duplicate keys crash LazyColumn).
+            items(state.networks) { network ->
                 NetworkRow(network)
             }
             if (!state.scanning && state.networks.isEmpty() && !state.permissionMissing && state.wifiEnabled) {
