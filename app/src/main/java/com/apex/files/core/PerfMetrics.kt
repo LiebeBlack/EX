@@ -75,7 +75,7 @@ object PerfMetrics {
     inline fun <T> time(
         tag: String,
         detail: String? = null,
-        countOf: ((T) -> Int)? = null,
+        noinline countOf: ((T) -> Int)? = null,
         block: () -> T,
     ): T {
         val start = System.nanoTime()
@@ -89,7 +89,7 @@ object PerfMetrics {
     suspend inline fun <T> timeSuspend(
         tag: String,
         detail: String? = null,
-        countOf: ((T) -> Int)? = null,
+        noinline countOf: ((T) -> Int)? = null,
         block: () -> T,
     ): T {
         val start = System.nanoTime()
