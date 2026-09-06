@@ -41,8 +41,8 @@ class WifiRepository(context: Context) {
 
     val isEnabled: Boolean get() = runCatching { wifi.isWifiEnabled }.getOrDefault(false)
 
-    @SuppressLint("MissingPermission")
-    val currentBssid: String? get() = runCatching { wifi.connectionInfo?.bssid }.getOrNull()
+    val currentBssid: String?
+        @SuppressLint("MissingPermission") get() = runCatching { wifi.connectionInfo?.bssid }.getOrNull()
 
     /** Detailed snapshot of the network this device is currently on. */
     @SuppressLint("MissingPermission")
@@ -90,17 +90,17 @@ class WifiRepository(context: Context) {
         val current = currentBssid
         val best = HashMap<String, ScanResult>()
         for (r in raw) {
-            val ssid = r.ssid.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
-            if (ssid == null && r.bssid.isNullOrBlank()) continue
-            val key = r.bssid ?: ssid ?: continue
+            val ssid = r.SSID.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
+            if (ssid == null && r.BSSID.isNullOrBlank()) continue
+            val key = r.BSSID ?: ssid ?: continue
             val prev = best[key]
             if (prev == null || r.level > prev.level) best[key] = r
         }
         return best.values.map { r ->
-            val ssid = r.ssid.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
+            val ssid = r.SSID.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
             WifiNetwork(
                 ssid = ssid ?: "(red oculta)",
-                bssid = r.bssid.orEmpty(),
+                bssid = r.BSSID.orEmpty(),
                 rssi = r.level,
                 frequencyMhz = r.frequency,
                 channel = channelOf(r.frequency),
@@ -110,7 +110,7 @@ class WifiRepository(context: Context) {
                 signalPercent = signalPercent(r.level),
                 signalLevel = WifiManager.calculateSignalLevel(r.level, 5),
                 theoreticalMbps = theoreticalOf(r.capabilities, r.frequency),
-                isCurrent = current != null && r.bssid == current,
+                isCurrent = current != null && r.BSSID == current,
             )
         }.sortedByDescending { it.signalPercent }
     }
@@ -153,14 +153,16 @@ class WifiRepository(context: Context) {
 
     /** Best guess of the 802.11 standard + theoretical max throughput. */
     private fun standardOf(info: WifiInfo): Pair<String, Int> {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return when (info.wifiStandard) {
-                WifiInfo.WIFI_STANDARD_11AX -> "802.11ax" to if (info.frequency < 2500) 574 else 2401
-                WifiInfo.WIFI_STANDARD_11AC -> "802.11ac" to 1300
-                WifiInfo.WIFI_STANDARD_11N -> "802.11n" to if (info.frequency < 2500) 300 else 600
-                WifiInfo.WIFI_STANDARD_11A -> "802.11a" to 54
-                WifiInfo.WIFI_STANDARD_11G -> "802.11g" to 54
-                WifiInfo.WIFI_STANDARD_11B -> "802.11b" to 11
+                // WIFI_STANDARD_* live on ScanResult in the public SDK (the
+                // WifiInfo copies are @hide); the numeric values are identical.
+                ScanResult.WIFI_STANDARD_11AX -> "802.11ax" to if (info.frequency < 2500) 574 else 2401
+                ScanResult.WIFI_STANDARD_11AC -> "802.11ac" to 1300
+                ScanResult.WIFI_STANDARD_11N -> "802.11n" to if (info.frequency < 2500) 300 else 600
+                ScanResult.WIFI_STANDARD_11A -> "802.11a" to 54
+                ScanResult.WIFI_STANDARD_11G -> "802.11g" to 54
+                ScanResult.WIFI_STANDARD_11B -> "802.11b" to 11
                 else -> "802.11" to 54
             }
         }

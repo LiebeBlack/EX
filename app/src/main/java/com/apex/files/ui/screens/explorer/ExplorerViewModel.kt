@@ -266,7 +266,7 @@ class ExplorerViewModel(
             selection[to] = true
         } else {
             val range = if (a <= b) paths.subList(a, b + 1) else paths.subList(b, a + 1)
-            range.forEach { selection[it.path] = true }
+            range.forEach { selection[it] = true }
         }
         anchor = to
         _selectionMode.value = true
