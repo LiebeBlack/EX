@@ -117,7 +117,18 @@
     <ul class="plain">
       <li>Índice de búsqueda acotado y <strong>persistido en disco</strong>: la búsqueda global y los
         recuentos se restauran sin re-escandear el almacenamiento en cada arranque.</li>
+      <li><strong>Módulo opcional de búsqueda semántica y OCR</strong> (interruptor en Ajustes,
+        OFF por defecto, 100% local): indexa el contenido de imágenes y PDFs con
+        <code>ML Kit</code> (modelo latino incluido) y <code>pdfbox-android</code>, busca por
+        frases naturales (“facturas del mes pasado”), con sinónimos español/inglés, fechas
+        relativas y ranking BM25 sobre nombre + contenido.</li>
+      <li><strong>Carpetas inteligentes</strong>: grupos virtuales por contenido (Comprobantes de
+        Pago, Documentos de Trabajo, Código Fuente, Temporales…) con mover manual confirmado.
+        <strong>Limpieza Inteligente</strong>: detecta carpetas de apps desinstaladas, cachés y
+        temporales; borrado solo con confirmación y respetando la Papelera.</li>
       <li>Categorización por extensiones con expresiones regulares precompiladas.</li>
+      <li><strong>Copiado/movido en paralelo</strong> (4 trabajadores) con rescan automático de
+        MediaStore y colección <code>Descargas</code> (API 29+).</li>
       <li>Detección de duplicados en dos fases: agrupación por tamaño exacto y
         <code>SHA-256</code> solo sobre los grupos coincidentes.</li>
       <li>Toda la E/S en <code>Dispatchers.IO</code>; estado por <code>StateFlow</code> y progreso
