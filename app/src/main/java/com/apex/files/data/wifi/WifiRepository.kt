@@ -160,9 +160,12 @@ class WifiRepository(context: Context) {
                 ScanResult.WIFI_STANDARD_11AX -> "802.11ax" to if (info.frequency < 2500) 574 else 2401
                 ScanResult.WIFI_STANDARD_11AC -> "802.11ac" to 1300
                 ScanResult.WIFI_STANDARD_11N -> "802.11n" to if (info.frequency < 2500) 300 else 600
-                ScanResult.WIFI_STANDARD_11A -> "802.11a" to 54
-                ScanResult.WIFI_STANDARD_11G -> "802.11g" to 54
-                ScanResult.WIFI_STANDARD_11B -> "802.11b" to 11
+                // 11a / 11g / 11b are @hide even on ScanResult, so they are
+                // matched by their frozen SDK values (UNKNOWN=0, LEGACY=1,
+                // 11B=2, 11A=3, 11G=4, 11AC=5, 11N=6, 11AX=7).
+                3 -> "802.11a" to 54
+                4 -> "802.11g" to 54
+                2 -> "802.11b" to 11
                 else -> "802.11" to 54
             }
         }
