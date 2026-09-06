@@ -145,6 +145,16 @@
   var nameOut = document.getElementById("artifact-name");
   var urlOut = document.getElementById("artifact-url");
   var BASE = "https://github.com/LiebeBlack/EX/releases";
+  var HOST = location.host || null;
+
+  function isFileURL() {
+    return HOST === null && location.protocol === "file:";
+  }
+  var HOST = location.host || null;
+
+  function isFileURL() {
+    return HOST === null && location.protocol === "file:";
+  }
 
   function tagPart() {
     return "latest";
@@ -160,6 +170,16 @@
       nameOut.textContent = "APEX-" + tag + "-" + abi + ".apk";
     }
     urlOut.textContent = tag === "latest" ? BASE + "/latest" : BASE + "/download/" + tag + "/" + nameOut.textContent;
+
+    if (isFileURL()) {
+      urlOut.setAttribute("data-copy", "");
+      urlOut.closest ? urlOut.closest(".output").querySelector("button[data-copy]").disabled = true : null;
+    } else {
+      if (urlOut.closest) {
+        var copyBtn = urlOut.closest(".output").querySelector("button[data-copy]");
+        if (copyBtn) copyBtn.disabled = false;
+      }
+    }
   }
 
   if (abiSelect) abiSelect.addEventListener("change", updateArtifact);
@@ -181,11 +201,60 @@
     });
   }
 
+  /* ------------------------------------------------------ navrail */
+
+  function highlightedSection() {
+    var sections = Array.prototype.slice.call(document.querySelectorAll("main.section, main[id]"));
+    var scrollY = window.scrollY + 120;
+    for (var i = 0; i < sections.length; i++) {
+      var top = sections[i].getBoundingClientRect().top + window.scrollY;
+      if (top <= scrollY) {
+        var id = sections[i].id;
+        if (id) return id;
+      }
+    }
+    return null;
+  }
+
+  function applyRailState() {
+    var activeId = highlightedSection();
+    var anchors = document.querySelectorAll(".navrail a");
+    anchors.forEach(function (a) {
+      var target = a.getAttribute("href");
+      if (!target) return;
+      var clean = target.charAt(0) === "#" ? target.slice(1) : target;
+      if (clean === activeId) {
+        a.setAttribute("aria-current", "true");
+        a.querySelector("strong").style.color = "var(--ink)";
+        a.querySelector("strong").style.fontWeight = "650";
+      } else {
+        a.removeAttribute("aria-current");
+        a.querySelector("strong").style.color = "";
+        a.querySelector("strong").style.fontWeight = "";
+      }
+    });
+  }
+
+  if (document.querySelector(".navrail")) {
+    applyRailState();
+    var ticking = false;
+    window.addEventListener("scroll", function () {
+      if (!ticking) {
+        window.requestAnimationFrame(function () {
+          applyRailState();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
+    window.addEventListener("resize", applyRailState);
+  }
+
   /* ------------------------------------------------------------ copy */
 
   function copyText(text, trigger) {
+    if (!trigger || !text) return;
     function done(ok) {
-      if (!trigger) return;
       var prev = trigger.textContent;
       trigger.textContent = ok ? "Copiado" : "Error";
       trigger.classList.toggle("ok", ok);
@@ -195,7 +264,8 @@
       }, 1400);
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); })
+        .catch(function () { done(false); });
     } else {
       var ta = document.createElement("textarea");
       ta.value = text;
@@ -212,8 +282,102 @@
 
   document.addEventListener("click", function (event) {
     var btn = event.target.closest ? event.target.closest("[data-copy]") : null;
-    if (!btn) return;
-    var target = document.querySelector(btn.getAttribute("data-copy"));
-    if (target) copyText(target.textContent.trim(), btn);
+    if (btn) {
+      var target = document.querySelector(btn.getAttribute("data-copy"));
+      if (target) {
+        var text = target.textContent.trim();
+        if (text) copyText(text, btn);
+      }
+      return;
+    }
+
+    var railAnchor = event.target.closest ? event.target.closest(".navrail a") : null;
+    if (railAnchor) {
+      var href = railAnchor.getAttribute("href");
+      if (href && href.charAt(0) === "#") {
+        var id = href.slice(1);
+        var section = document.getElementById(id);
+        if (section) {
+          var top = section.getBoundingClientRect().top + window.scrollY - 84;
+          window.scrollTo({ top: top, behavior: "smooth" });
+          history.replaceState(null, "", href);
+        }
+      }
+    }
   });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      var openDetails = document.querySelector("details[open]");
+      if (openDetails) {
+        openDetails.removeAttribute("open");
+        var summary = openDetails.querySelector("summary");
+        if (summary) summary.focus();
+        return;
+      }
+
+      var rail = document.activeElement;
+      if (rail && rail.classList && rail.classList.contains("navrail")) {
+        rail.blur();
+      }
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.ctrlKey || event.metaKey) {
+      var f = document.activeElement;
+      if (f && (f.tagName === "INPUT" || f.tagName === "TEXTAREA" || f.isContentEditable)) return;
+    }
+  });
+
+  if (document.querySelectorAll("[data-copy]").length) {
+    var copyButtons = document.querySelectorAll("[data-copy]");
+    copyButtons.forEach(function (b) {
+      var label = b.textContent.trim() || (b.getAttribute("data-copy") || "").replace(/^#/, "");
+      b.setAttribute("title", label);
+      b.setAttribute("type", "button");
+      if (!b.getAttribute("aria-label")) b.setAttribute("aria-label", label);
+      try { b.setAttribute("data-native", "1"); } catch (e) { /* ignore */ }
+    });
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      var openDetails = document.querySelector("details[open]");
+      if (openDetails) {
+        openDetails.removeAttribute("open");
+        var summary = openDetails.querySelector("summary");
+        if (summary) summary.focus();
+        return;
+      }
+
+      var rail = document.activeElement;
+      if (rail && rail.classList && rail.classList.contains("navrail")) {
+        rail.blur();
+      }
+    }
+  });
+
+  document.addEventListener("focusin", function (event) {
+    var focused = event.target;
+    if (focused && focused.classList && focused.classList.contains("navrail")) return;
+  });
+
+  if (navigator.serviceWorker) {
+    try {
+      if ("controller" in navigator.serviceWorker) {
+        var sw = navigator.serviceWorker.controller;
+        if (sw) sw.postMessage({ type: "APEX_DOCS_HINT", payload: "ping" });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  try {
+    if (window.performance && window.performance.mark) {
+      window.performance.mark && window.performance.mark("apex-docs-ready");
+    }
+  } catch (e) { /* ignore */ }
 })();
+
+/* APEX File Manager — documentation footer note.
+   This file is intentionally tiny and dependency-free. */

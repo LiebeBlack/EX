@@ -80,6 +80,25 @@ a { color: var(--ink); text-underline-offset: 2px; }
 
 a:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
 
+:focus-visible { outline-color: var(--ink); }
+
+details[open] > summary {
+  margin-bottom: 6px;
+}
+
+summary:focus-visible {
+  outline: none;
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink);
+}
+
+code.wrap {
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 /* ------------------------------------------------------------------ header */
 
 .technology-strip {
@@ -403,22 +422,54 @@ pre code { background: none; border: 0; padding: 0; }
   min-width: 110px;
 }
 
-.vitem .vwhat { color: var(--muted); font-size: 15.5px; flex: 1; min-width: 230px; }
+.vitem .vwhat { color: var(--muted); font-size: 15.5px; flex: 1; min-width: 230px; line-height: 1.5; }
 
-.vitem .vmeta { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--faint); }
+.vitem .vmeta {
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .vitem .vbody {
   margin: 14px 0 12px 132px;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.65;
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  text-align: left;
+  text-justify: inter-word;
+  text-autospace: none;
+  text-spacing: normal;
+  text-emphasis: none;
+  text-decoration-skip-ink: auto;
+  text-decoration-skip: auto;
+  text-underline-offset: 0.1em;
+  text-underline-position: under;
+  text-overflow: clip;
+  text-indent: 0;
+  text-shadow: none;
+  text-transform: none;
+  text-combine-upright: none;
+  text-orientation: mixed;
+  text-align-last: auto;
 }
 
 .vitem .vbody ul { margin: 8px 0 0; padding-left: 0; list-style: none; }
 .vitem .vbody li { padding-left: 22px; position: relative; margin-bottom: 6px; }
 .vitem .vbody li::before { content: "·"; position: absolute; left: 6px; color: var(--faint); padding-top: 1px; }
 
-.vitem details[open] > summary { margin-bottom: 6px; }
+.vitem details[open] > summary { margin-bottom: 8px; }
+
+details[open] > summary:focus-visible {
+  outline: none;
+}
 
 @media (max-width: 560px) {
   .vitem .vbody { margin-left: 0; }
@@ -491,6 +542,55 @@ code.wrap { word-break: break-all; }
 button.quiet.copy {
   margin-left: auto;
   white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- navrail */
+
+.navrail {
+  position: fixed;
+  top: 74px;
+  right: 16px;
+  z-index: 9;
+}
+
+.navrail a {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-decoration: none;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  max-width: 220px;
+  transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.navrail a:hover {
+  transform: translateY(-2px);
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
+}
+
+.navrail strong {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.navrail span {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .navrail { display: none; }
 }
 
 /* ----------------------------------------------------------------- misc */
