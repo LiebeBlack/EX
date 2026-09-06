@@ -27,7 +27,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.WrapText
+import androidx.compose.material.icons.automirrored.outlined.WrapText
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,7 +97,7 @@ fun TextViewerScreen(node: FileNode) {
             actions = {
                 if (!state.editing && state.totalLines != null) {
                     ApexIconButton(
-                        Icons.Outlined.WrapText,
+                        Icons.AutoMirrored.Outlined.WrapText,
                         if (state.wrap) "Desactivar ajuste de línea" else "Ajustar línea",
                         tint = if (state.wrap) {
                             MaterialTheme.colorScheme.primary

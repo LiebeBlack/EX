@@ -28,7 +28,7 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Refresh
@@ -134,7 +134,7 @@ fun HomeScreen() {
                 }
                 ApexIconButton(Icons.Outlined.Search, "Buscar") { navigator.push(Screen.Search()) }
                 ApexIconButton(Icons.Outlined.Refresh, "Actualizar") { vm.refresh() }
-                ApexIconButton(Icons.Outlined.HelpOutline, "Ayuda de esta pantalla") { showHelp = true }
+                ApexIconButton(Icons.AutoMirrored.Outlined.HelpOutline, "Ayuda de esta pantalla") { showHelp = true }
                 ApexIconButton(Icons.Outlined.Settings, "Ajustes") { navigator.push(Screen.Settings) }
             }
         }

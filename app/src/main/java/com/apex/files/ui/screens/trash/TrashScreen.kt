@@ -18,7 +18,7 @@ import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -160,7 +160,7 @@ private fun TrashRow(
     ApexCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                if (entry.isDir) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile,
+                if (entry.isDir) Icons.Outlined.Folder else Icons.AutoMirrored.Outlined.InsertDriveFile,
                 null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp),

@@ -19,7 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -269,7 +269,7 @@ private fun PreviewRow(item: BatchRenamer.PlanItem) {
             modifier = Modifier.weight(1f),
         )
         Icon(
-            Icons.Outlined.ArrowForward,
+            Icons.AutoMirrored.Outlined.ArrowForward,
             null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(horizontal = 6.dp).size(14.dp),

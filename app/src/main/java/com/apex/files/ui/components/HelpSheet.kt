@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,7 +41,7 @@ fun HelpSheet(
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Outlined.HelpOutline,
+                        Icons.AutoMirrored.Outlined.HelpOutline,
                         null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp),

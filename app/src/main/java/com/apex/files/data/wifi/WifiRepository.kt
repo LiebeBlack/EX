@@ -4,12 +4,15 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.net.Inet4Address
 
 /**
  * Local Wi-Fi diagnostics. Zero network traffic: connection state, link
@@ -42,18 +45,18 @@ class WifiRepository(context: Context) {
     val isEnabled: Boolean get() = runCatching { wifi.isWifiEnabled }.getOrDefault(false)
 
     val currentBssid: String?
-        @SuppressLint("MissingPermission") get() = runCatching { wifi.connectionInfo?.bssid }.getOrNull()
+        @SuppressLint("MissingPermission") get() = runCatching { currentWifiInfo()?.bssid }.getOrNull()
 
     /** Detailed snapshot of the network this device is currently on. */
     @SuppressLint("MissingPermission")
     fun currentConnection(): WifiConnection? {
-        val info = runCatching { wifi.connectionInfo }.getOrNull() ?: return null
+        val info = runCatching { currentWifiInfo() }.getOrNull() ?: return null
         if (info.ssid == null) return null
         val ssid = info.ssid.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
         val rssi = info.rssi
         val freq = info.frequency
         val (standardLabel, theoretical) = standardOf(info)
-        val dhcp = runCatching { wifi.dhcpInfo }.getOrNull()
+        val ipInfo = currentIpInfo()
         return WifiConnection(
             ssid = ssid ?: "Red desconocida",
             bssid = info.bssid,
@@ -65,9 +68,9 @@ class WifiRepository(context: Context) {
             theoreticalMbps = theoretical,
             standardLabel = standardLabel,
             signalPercent = signalPercent(rssi),
-            signalLevel = WifiManager.calculateSignalLevel(rssi, 5),
-            ipAddress = dhcp?.ipAddress?.takeIf { it != 0 }?.let(::intToIp),
-            gateway = dhcp?.gateway?.takeIf { it != 0 }?.let(::intToIp),
+            signalLevel = signalLevel(rssi),
+            ipAddress = ipInfo?.ipAddress,
+            gateway = ipInfo?.gateway,
             efficiencyPercent = if (theoretical > 0) {
                 ((info.linkSpeed.toFloat() / theoretical) * 100).toInt().coerceIn(0, 100)
             } else 0,
@@ -76,6 +79,7 @@ class WifiRepository(context: Context) {
 
     /** Kicks off an asynchronous scan; results land within a second or two. */
     @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION") // third-party scan requests have no replacement; throttled since API 28
     fun startScan(): Boolean = runCatching { wifi.startScan() }.getOrDefault(false)
 
     /**
@@ -90,14 +94,14 @@ class WifiRepository(context: Context) {
         val current = currentBssid
         val best = HashMap<String, ScanResult>()
         for (r in raw) {
-            val ssid = r.SSID.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
+            val ssid = ssidOf(r)?.trim('"')?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
             if (ssid == null && r.BSSID.isNullOrBlank()) continue
             val key = r.BSSID ?: ssid ?: continue
             val prev = best[key]
             if (prev == null || r.level > prev.level) best[key] = r
         }
         return best.values.map { r ->
-            val ssid = r.SSID.trim('"').takeIf { it.isNotBlank() && it != "<unknown ssid>" }
+            val ssid = ssidOf(r)?.trim('"')?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
             WifiNetwork(
                 ssid = ssid ?: "(red oculta)",
                 bssid = r.BSSID.orEmpty(),
@@ -108,7 +112,7 @@ class WifiRepository(context: Context) {
                 security = securityOf(r.capabilities),
                 capabilities = r.capabilities.orEmpty(),
                 signalPercent = signalPercent(r.level),
-                signalLevel = WifiManager.calculateSignalLevel(r.level, 5),
+                signalLevel = signalLevel(r.level),
                 theoreticalMbps = theoreticalOf(r.capabilities, r.frequency),
                 isCurrent = current != null && r.BSSID == current,
             )
@@ -121,8 +125,7 @@ class WifiRepository(context: Context) {
      * empty and the UI explains the limitation. Never touches the network.
      */
     fun connectedDevices(): List<LanDevice> {
-        val gateway = runCatching { wifi.dhcpInfo }.getOrNull()?.gateway
-            ?.takeIf { it != 0 }?.let(::intToIp)
+        val gateway = currentIpInfo()?.gateway
         val lines = try {
             val f = File("/proc/net/arp")
             if (!f.canRead()) return emptyList()
@@ -199,6 +202,22 @@ class WifiRepository(context: Context) {
     /** Rough signal quality: -100 dBm → 0 %, -50 dBm → 100 %. */
     private fun signalPercent(rssi: Int): Int = ((rssi + 100) * 2).coerceIn(0, 100)
 
+    /** 0–4 bars; the two-arg calculateSignalLevel overload is deprecated since API 33. */
+    private fun signalLevel(rssi: Int): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            WifiManager.calculateSignalLevel(rssi)
+        } else {
+            @Suppress("DEPRECATION") WifiManager.calculateSignalLevel(rssi, 5)
+        }
+
+    /** Scan SSID; the SSID field is deprecated since API 33 in favor of wifiSsid. */
+    private fun ssidOf(r: ScanResult): String? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            r.wifiSsid?.utf8Text?.toString()
+        } else {
+            @Suppress("DEPRECATION") r.SSID
+        }
+
     /** Channel number for a frequency in MHz (0 when unrecognized). */
     private fun channelOf(frequency: Int): Int = when {
         frequency in 2412..2472 -> (frequency - 2412) / 5 + 1
@@ -215,8 +234,40 @@ class WifiRepository(context: Context) {
         else -> "—"
     }
 
-    private fun intToIp(address: Int): String =
-        "${address and 0xFF}.${(address shr 8) and 0xFF}.${(address shr 16) and 0xFF}.${(address shr 24) and 0xFF}"
+    /**
+     * Current Wi-Fi link details without the deprecated
+     * WifiManager#connectionInfo / #dhcpInfo pair: the [WifiInfo] comes from
+     * the active network's capabilities (transportInfo) and the IP / default
+     * gateway from its LinkProperties. Null when not on Wi-Fi.
+     */
+    private fun currentWifiInfo(): WifiInfo? = runCatching {
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return@runCatching null
+        val caps = cm.getNetworkCapabilities(network) ?: return@runCatching null
+        if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return@runCatching null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            caps.transportInfo as? WifiInfo
+        } else {
+            @Suppress("DEPRECATION") wifi.connectionInfo
+        }
+    }.getOrNull()
+
+    /** IPv4 address + default gateway of the active Wi-Fi network. */
+    private fun currentIpInfo(): IpInfo? = runCatching {
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return@runCatching null
+        val caps = cm.getNetworkCapabilities(network) ?: return@runCatching null
+        if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return@runCatching null
+        val lp = cm.getLinkProperties(network) ?: return@runCatching null
+        IpInfo(
+            ipAddress = lp.linkAddresses.firstOrNull { it.address is Inet4Address }
+                ?.address?.hostAddress,
+            gateway = lp.routes.firstOrNull { it.isDefaultRoute && it.gateway is Inet4Address }
+                ?.gateway?.hostAddress,
+        )
+    }.getOrNull()
+
+    private data class IpInfo(val ipAddress: String?, val gateway: String?)
 }
 
 /** Snapshot of the network this device is currently connected to. */

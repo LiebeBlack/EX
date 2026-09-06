@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -81,7 +81,7 @@ fun ApexTopBar(
             }
             if (tips != null) {
                 ApexIconButton(
-                    Icons.Outlined.HelpOutline,
+                    Icons.AutoMirrored.Outlined.HelpOutline,
                     "Ayuda de esta pantalla",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = { showHelp = true },

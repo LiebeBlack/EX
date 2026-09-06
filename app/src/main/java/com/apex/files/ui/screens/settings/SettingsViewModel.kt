@@ -1,6 +1,7 @@
 package com.apex.files.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
+import coil.annotation.ExperimentalCoilApi
 import com.apex.files.core.Accent
 import com.apex.files.core.AppContainer
 import com.apex.files.core.ListDensity
@@ -11,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalCoilApi::class)
 class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     val accent: StateFlow<Accent> = container.settings.accent

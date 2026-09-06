@@ -25,7 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
@@ -374,7 +374,7 @@ fun SettingsScreen() {
                 },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.HelpOutline, null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Ver guía de bienvenida", style = MaterialTheme.typography.titleMedium)
