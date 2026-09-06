@@ -4,16 +4,20 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,15 +31,29 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.ControlPointDuplicate
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
@@ -44,6 +62,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,6 +83,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
@@ -92,6 +112,7 @@ import com.apex.files.ui.components.SelectionBar
 import com.apex.files.ui.theme.ApexBorder
 import com.apex.files.ui.theme.ApexContainer
 import com.apex.files.ui.theme.ApexContainerHigh
+import com.apex.files.ui.theme.ApexDanger
 import com.apex.files.ui.theme.MonoTextStyleSmall
 import kotlinx.coroutines.flow.Flow
 
@@ -116,6 +137,8 @@ fun ExplorerScreen(location: Location) {
     var sortMenuOpen by remember { mutableStateOf(false) }
     var showFilter by remember { mutableStateOf(false) }
     var addMenuOpen by remember { mutableStateOf(false) }
+    /** Node whose long-press context sheet is open (null = none). */
+    var contextNode by remember { mutableStateOf<FileNode?>(null) }
     val trashEnabled by container.settings.trashEnabled.collectAsStateWithLifecycle()
     val confirmPermanentDelete by container.settings.confirmPermanentDelete.collectAsStateWithLifecycle()
     val selectionMode by vm.selectionMode.collectAsStateWithLifecycle()
@@ -155,9 +178,12 @@ fun ExplorerScreen(location: Location) {
             .onFailure { toast("No hay aplicación para este tipo de archivo") }
     }
 
-    fun shareSelected() {
-        val uris = vm.selectedNodes().mapNotNull { container.fs.shareUri(it) }
-        if (uris.isEmpty()) return
+    fun shareNodes(nodes: List<FileNode>) {
+        val uris = nodes.mapNotNull { container.fs.shareUri(it) }
+        if (uris.isEmpty()) {
+            toast("No se pudo compartir")
+            return
+        }
         val intent = if (uris.size == 1) {
             Intent(Intent.ACTION_SEND).setType("*/*")
                 .putExtra(Intent.EXTRA_STREAM, uris.first())
@@ -170,11 +196,25 @@ fun ExplorerScreen(location: Location) {
             .onFailure { toast("No se pudo compartir") }
     }
 
-    fun copyPaths() {
-        val paths = vm.selectedNodes().map { it.path }.joinToString("\n")
+    fun copyPathsOf(nodes: List<FileNode>) {
+        val paths = nodes.map { it.path }.joinToString("\n")
         if (paths.isEmpty()) return
         clipboard.setText(AnnotatedString(paths))
         toast("Ruta(s) copiadas al portapapeles")
+    }
+
+    fun shareSelected() = shareNodes(vm.selectedNodes())
+
+    fun copyPaths() = copyPathsOf(vm.selectedNodes())
+
+    /** Adds all selected nodes to favorites (or removes them when all are already there). */
+    fun toggleFavorite(nodes: List<FileNode>): Boolean {
+        if (nodes.isEmpty()) return false
+        val allFavorites = nodes.all { container.favorites.isFavorite(it.path) }
+        nodes.forEach { n ->
+            if (container.favorites.isFavorite(n.path) == allFavorites) container.favorites.toggle(n)
+        }
+        return allFavorites
     }
 
     /** Filesystem-safe name check shown before creating/renaming/compressing. */
@@ -368,10 +408,13 @@ fun ExplorerScreen(location: Location) {
                 }
             }
             else -> {
+                // weight(1f) instead of fillMaxSize so the folder summary and
+                // the SelectionBar below stay pinned on screen; a full-height
+                // child would push them off the bottom of the Column.
                 RefreshableBox(
                     refreshing = state.loading,
                     onRefresh = { vm.refresh() },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
                     val visible = state.visibleEntries
                     if (state.viewMode == ViewMode.LIST) {
@@ -395,7 +438,7 @@ fun ExplorerScreen(location: Location) {
                                     },
                                     onLongClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        vm.longPress(node)
+                                        if (selectionMode) vm.longPress(node) else contextNode = node
                                     },
                                 )
                             }
@@ -429,7 +472,7 @@ fun ExplorerScreen(location: Location) {
                                     },
                                     onLongClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        vm.longPress(node)
+                                        if (selectionMode) vm.longPress(node) else contextNode = node
                                     },
                                 )
                             }
@@ -496,6 +539,18 @@ fun ExplorerScreen(location: Location) {
                 },
                 onShare = { shareSelected() },
                 onCompress = { showCompressDialog = true },
+                onDuplicate = {
+                    val targets = vm.selectedNodes()
+                    if (targets.isEmpty() || targets.any { it.uri != null || it.isDir }) {
+                        toast("Solo se pueden duplicar archivos del almacenamiento interno")
+                    } else {
+                        launchOperation(OpType.COPY, vm.duplicateFlow())
+                    }
+                },
+                onFavorite = {
+                    val removed = toggleFavorite(vm.selectedNodes())
+                    toast(if (removed) "Quitados de favoritos" else "Añadidos a favoritos")
+                },
                 onProperties = { vm.selectedNodes().firstOrNull()?.let(vm::showProperties) },
                 onCopyPaths = { copyPaths() },
                 onExtract = if (canExtract) ({ extractHere() }) else null,
@@ -577,6 +632,84 @@ fun ExplorerScreen(location: Location) {
             onDismiss = { showCompressDialog = false },
         )
     }
+    contextNode?.let { node ->
+        val isFav = container.favorites.isFavorite(node.path)
+        val sheetCanExtract = !node.isDir && container.archive.isSupported(node)
+        NodeContextSheet(
+            node = node,
+            isFavorite = isFav,
+            canExtract = sheetCanExtract,
+            onOpen = {
+                contextNode = null
+                if (node.isDir) vm.openDir(node) else openFile(node)
+            },
+            onOpenWith = {
+                contextNode = null
+                openWithChooser(node)
+            },
+            onShare = {
+                contextNode = null
+                shareNodes(listOf(node))
+            },
+            onSelect = {
+                contextNode = null
+                vm.enterSelection(node)
+            },
+            onCopyTo = {
+                contextNode = null
+                vm.enterSelection(node)
+                vm.startDestMode(ExplorerViewModel.DestMode.COPY)
+            },
+            onMoveTo = {
+                contextNode = null
+                vm.enterSelection(node)
+                vm.startDestMode(ExplorerViewModel.DestMode.MOVE)
+            },
+            onRename = {
+                contextNode = null
+                vm.enterSelection(node)
+                showRenameDialog = true
+            },
+            onDuplicate = {
+                contextNode = null
+                if (node.uri != null || node.isDir) {
+                    toast("Solo se pueden duplicar archivos del almacenamiento interno")
+                } else {
+                    vm.enterSelection(node)
+                    launchOperation(OpType.COPY, vm.duplicateFlow())
+                }
+            },
+            onCompress = {
+                contextNode = null
+                vm.enterSelection(node)
+                showCompressDialog = true
+            },
+            onExtract = {
+                contextNode = null
+                vm.enterSelection(node)
+                extractHere()
+            },
+            onToggleFavorite = {
+                val nowFavorite = container.favorites.toggle(node)
+                toast(if (nowFavorite) "Añadido a favoritos" else "Quitado de favoritos")
+            },
+            onCopyPath = {
+                contextNode = null
+                copyPathsOf(listOf(node))
+            },
+            onProperties = {
+                contextNode = null
+                vm.showProperties(node)
+            },
+            onDelete = {
+                contextNode = null
+                vm.enterSelection(node)
+                showDeleteConfirm = true
+            },
+            onDismiss = { contextNode = null },
+        )
+    }
+
     state.properties?.let { props ->
         // Local mirror of the star state so the sheet updates instantly on
         // toggle; remember is keyed per node because the sheet can switch files.
@@ -681,4 +814,126 @@ private fun FilterBar(
         )
     }
     HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+}
+
+/**
+ * Bottom sheet with the per-file options shown on long-press: open/share the
+ * file, or run every folder/file operation from one place.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NodeContextSheet(
+    node: FileNode,
+    isFavorite: Boolean,
+    canExtract: Boolean,
+    onOpen: () -> Unit,
+    onOpenWith: () -> Unit,
+    onShare: () -> Unit,
+    onSelect: () -> Unit,
+    onCopyTo: () -> Unit,
+    onMoveTo: () -> Unit,
+    onRename: () -> Unit,
+    onDuplicate: () -> Unit,
+    onCompress: () -> Unit,
+    onExtract: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onCopyPath: () -> Unit,
+    onProperties: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = ApexContainer) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                node.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (node.isDir) "Carpeta · ${SizeFormatter.format(node.size)}"
+                else "${node.extension.ifBlank { "archivo" }} · ${SizeFormatter.format(node.size)}",
+                style = MonoTextStyleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+
+            ContextRow(
+                if (node.isDir) Icons.Outlined.FolderOpen else Icons.AutoMirrored.Outlined.OpenInNew,
+                "Abrir",
+                onClick = onOpen,
+            )
+            if (!node.isDir) {
+                ContextRow(Icons.AutoMirrored.Outlined.OpenInNew, "Abrir con…", onClick = onOpenWith)
+                ContextRow(Icons.Outlined.Share, "Compartir", onClick = onShare)
+            }
+            ContextRow(Icons.Outlined.SelectAll, "Seleccionar", onClick = onSelect)
+
+            HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+            ContextRow(Icons.Outlined.ContentCopy, "Copiar a…", onClick = onCopyTo)
+            ContextRow(Icons.AutoMirrored.Outlined.DriveFileMove, "Mover a…", onClick = onMoveTo)
+            if (!node.isDir) {
+                ContextRow(Icons.Outlined.ControlPointDuplicate, "Duplicar", onClick = onDuplicate)
+            }
+            ContextRow(Icons.Outlined.Edit, "Renombrar", onClick = onRename)
+            ContextRow(Icons.Outlined.FolderZip, "Comprimir", onClick = onCompress)
+            if (canExtract) {
+                ContextRow(Icons.Outlined.Unarchive, "Extraer aquí", onClick = onExtract)
+            }
+
+            HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+            ContextRow(
+                if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarBorder,
+                if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                onClick = onToggleFavorite,
+            )
+            ContextRow(Icons.Outlined.ContentPaste, "Copiar ruta", onClick = onCopyPath)
+
+            HorizontalDivider(color = ApexBorder, thickness = 1.dp)
+            ContextRow(Icons.Outlined.Info, "Propiedades", onClick = onProperties)
+            ContextRow(Icons.Outlined.Delete, "Eliminar", onClick = onDelete, danger = true)
+        }
+    }
+}
+
+/** One tappable option row inside [NodeContextSheet]. */
+@Composable
+private fun ContextRow(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    danger: Boolean = false,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 13.dp, horizontal = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon,
+            label,
+            tint = if (danger) ApexDanger else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (danger) ApexDanger else MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }

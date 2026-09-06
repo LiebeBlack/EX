@@ -397,6 +397,24 @@ class ExplorerViewModel(
         _opSummary.value = summarize(OpType.COMPRESS, acc)
     }
 
+    /**
+     * Copies each selected local file next to itself with a unique name
+     * ("x.txt" → "x (1).txt"). SAF nodes and folders are skipped.
+     */
+    fun duplicateFlow(): Flow<OpProgress> = flow {
+        val sources = selectedNodes().filter { it.uri == null && !it.isDir }
+        clearSummary()
+        if (sources.isEmpty()) {
+            _opError.value = "Solo se pueden duplicar archivos del almacenamiento interno"
+            return@flow
+        }
+        var acc = OpResult()
+        for (n in sources) {
+            acc += container.fs.duplicateFile(n, onProgress = { emit(it) })
+        }
+        _opSummary.value = "Duplicados: ${acc.filesDone} elemento(s)${if (acc.errors > 0) " · ${acc.errors} errores" else ""}"
+    }
+
     private val _opSummary = MutableStateFlow<String?>(null)
     val opSummary: StateFlow<String?> = _opSummary.asStateFlow()
 

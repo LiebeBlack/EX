@@ -202,18 +202,20 @@ class WifiRepository(context: Context) {
     /** Rough signal quality: -100 dBm → 0 %, -50 dBm → 100 %. */
     private fun signalPercent(rssi: Int): Int = ((rssi + 100) * 2).coerceIn(0, 100)
 
-    /** 0–4 bars; the two-arg calculateSignalLevel overload is deprecated since API 33. */
-    private fun signalLevel(rssi: Int): Int =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            WifiManager.calculateSignalLevel(rssi)
-        } else {
-            @Suppress("DEPRECATION") WifiManager.calculateSignalLevel(rssi, 5)
-        }
+    /**
+     * 0–4 bars. The one-arg calculateSignalLevel overload is not part of the
+     * public SDK (@SystemApi), so the deprecated five-level overload is the
+     * only option — both return a level in [0, numLevels).
+     */
+    private fun signalLevel(rssi: Int): Int {
+        @Suppress("DEPRECATION")
+        return WifiManager.calculateSignalLevel(rssi, 5)
+    }
 
     /** Scan SSID; the SSID field is deprecated since API 33 in favor of wifiSsid. */
     private fun ssidOf(r: ScanResult): String? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            r.wifiSsid?.utf8Text?.toString()
+            r.wifiSsid?.toString()
         } else {
             @Suppress("DEPRECATION") r.SSID
         }

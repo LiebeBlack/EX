@@ -142,6 +142,33 @@ class FsRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Duplicates a local file next to itself under a unique sibling name
+     * ("foto.jpg" → "foto (1).jpg"). SAF-backed nodes are not supported
+     * because their parent DocumentFile is not resolvable from the child uri.
+     */
+    suspend fun duplicateFile(
+        src: FileNode,
+        onProgress: suspend (OpProgress) -> Unit,
+    ): OpResult = withContext(Dispatchers.IO) {
+        if (src.uri != null || src.isDir) {
+            return@withContext OpResult(skipped = 1, firstError = "Solo se pueden duplicar archivos locales")
+        }
+        val srcFile = File(src.path)
+        if (!srcFile.isFile) {
+            return@withContext OpResult(skipped = 1, firstError = "El archivo ya no existe")
+        }
+        val parent = srcFile.parentFile
+        if (parent == null) {
+            return@withContext OpResult(skipped = 1, firstError = "No se pudo duplicar el archivo")
+        }
+        val target = uniqueFile(parent, srcFile.name)
+        val acc = OpAccumulator()
+        val sink = ProgressSink(OpType.COPY, onProgress)
+        copyFile(srcFile, target, sink, srcFile.length().coerceAtLeast(1), acc)
+        acc.result()
+    }
+
     private suspend fun copyFileTree(
         src: FileNode,
         destDir: FileNode,

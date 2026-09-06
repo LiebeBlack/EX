@@ -26,6 +26,10 @@ class SpaceAnalyzer(private val fs: FsRepository) {
         val category: Category?,
         val children: List<SpaceNode> = emptyList(),
         val isFile: Boolean = true,
+        /** Real on-disk location of [this] node (empty for aggregated/dirs). */
+        val path: String = "",
+        /** File modification time when [path] is a real file. */
+        val lastModified: Long = 0L,
     )
 
     data class SpaceScan(
@@ -48,12 +52,19 @@ class SpaceAnalyzer(private val fs: FsRepository) {
             emit(SpaceScan(currentPath = node.path))
 
             if (node.uri != null) {
-                return SpaceNode(node.name, fs.sizeOf(node), Category.OTHER, isFile = !node.isDir)
+                return SpaceNode(node.name, fs.sizeOf(node), Category.OTHER, isFile = !node.isDir, path = node.path)
             }
 
             val file = java.io.File(node.path)
             if (file.isFile) {
-                return SpaceNode(node.name, file.length().coerceAtLeast(0), node.category, isFile = true)
+                return SpaceNode(
+                    node.name,
+                    file.length().coerceAtLeast(0),
+                    node.category,
+                    isFile = true,
+                    path = node.path,
+                    lastModified = node.lastModified,
+                )
             }
             if (!file.isDirectory || Paths.isSymlink(file)) {
                 return SpaceNode(node.name, 0L, null, isFile = false)
@@ -87,6 +98,8 @@ class SpaceAnalyzer(private val fs: FsRepository) {
                             size,
                             CategoryEngine.classify(child.name),
                             isFile = true,
+                            path = child.absolutePath,
+                            lastModified = child.lastModified(),
                         )
                     )
                     sum += size

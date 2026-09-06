@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.ControlPointDuplicate
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +62,8 @@ fun SelectionBar(
     onDelete: () -> Unit,
     onShare: () -> Unit,
     onCompress: () -> Unit,
+    onDuplicate: () -> Unit,
+    onFavorite: () -> Unit,
     onProperties: () -> Unit,
     onCopyPaths: () -> Unit,
     onExtract: (() -> Unit)? = null,
@@ -93,8 +97,10 @@ fun SelectionBar(
             ) {
                 SelectionAction(Icons.Outlined.DoneAll, "Todo", onSelectAll)
                 SelectionAction(Icons.Outlined.ContentCopy, "Copiar", onCopy)
+                SelectionAction(Icons.Outlined.ControlPointDuplicate, "Duplicar", onDuplicate)
                 SelectionAction(Icons.AutoMirrored.Outlined.DriveFileMove, "Mover", onMove)
                 SelectionAction(Icons.Outlined.Edit, "Renombrar", onRename)
+                SelectionAction(Icons.Outlined.StarBorder, "Favorito", onFavorite)
                 SelectionAction(Icons.Outlined.FolderZip, "Comprimir", onCompress)
                 SelectionAction(Icons.Outlined.Unarchive, "Extraer", onExtract ?: {}, enabled = onExtract != null)
                 SelectionAction(Icons.Outlined.ContentPaste, "Rutas", onCopyPaths)

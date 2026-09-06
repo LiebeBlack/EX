@@ -91,8 +91,8 @@ fun helpTips(screen: Screen): HelpTips? = when (screen) {
     is Screen.SpaceAnalyzer -> HelpTips(
         "Espacio",
         listOf(
-            "El treemap muestra el tamaño relativo de cada carpeta.",
-            "Toca un bloque para navegar a esa carpeta.",
+            "El treemap muestra el tamaño relativo de cada carpeta y archivo.",
+            "Toca una carpeta para entrar; toca un archivo (imagen, documento…) para abrirlo.",
             "El análisis está limitado en profundidad para ser rápido.",
         ),
     )

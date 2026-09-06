@@ -1,5 +1,6 @@
 package com.apex.files.ui.screens.space
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -39,13 +41,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
+import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
+import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.tools.SpaceAnalyzer
 import com.apex.files.tools.TreemapLayout
 import com.apex.files.tools.TreemapRect
+import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
+import com.apex.files.ui.NodeOpener
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.NeonProgressBar
@@ -57,9 +63,28 @@ import com.apex.files.ui.theme.MonoTextStyleSmall
 @Composable
 fun SpaceAnalyzerScreen(location: Location) {
     val navigator = LocalNavigator.current
+    val container = LocalContainer.current
+    val context = LocalContext.current
     val key = remember { "space-${location.key()}-${(navigator.current as? Screen.SpaceAnalyzer)?.serial ?: 0}" }
     val vm: SpaceAnalyzerViewModel = apexViewModel(key = key) { c -> SpaceAnalyzerViewModel(c, location) }
     val state by vm.state.collectAsStateWithLifecycle()
+
+    /** Opens a file block (image, document, …) in its internal viewer. */
+    fun openBlock(node: SpaceAnalyzer.SpaceNode) {
+        if (!node.isFile || node.path.isBlank()) return
+        val fileNode = FileNode(
+            name = node.name,
+            path = node.path,
+            isDir = false,
+            size = node.size,
+            lastModified = node.lastModified,
+            extension = CategoryEngine.extensionOf(node.name),
+            category = node.category ?: Category.OTHER,
+        )
+        NodeOpener.open(fileNode, container, navigator, context) { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     BackHandler(enabled = vm.canGoUp()) { vm.up() }
 
@@ -92,7 +117,7 @@ fun SpaceAnalyzerScreen(location: Location) {
             }
             Spacer(Modifier.weight(1f))
             Text(
-                "Toca un bloque para entrar",
+                "Carpeta: entra · Archivo: abre",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 14.dp),
@@ -131,7 +156,9 @@ fun SpaceAnalyzerScreen(location: Location) {
                 if (current != null && current.children.isNotEmpty()) {
                     TreemapCanvas(
                         node = current,
-                        onDrill = { vm.drill(it) },
+                        onTap = { tapped ->
+                            if (tapped.isFile) openBlock(tapped) else vm.drill(tapped)
+                        },
                         modifier = Modifier.weight(1f).fillMaxWidth().padding(10.dp),
                     )
                 } else {
@@ -149,7 +176,7 @@ fun SpaceAnalyzerScreen(location: Location) {
 @Composable
 private fun TreemapCanvas(
     node: SpaceAnalyzer.SpaceNode,
-    onDrill: (SpaceAnalyzer.SpaceNode) -> Unit,
+    onTap: (SpaceAnalyzer.SpaceNode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var canvasWidth by remember { mutableStateOf(0f) }
@@ -172,7 +199,7 @@ private fun TreemapCanvas(
             }
             .pointerInput(rects) {
                 detectTapGestures { pos ->
-                    rects.firstOrNull { it.contains(pos.x, pos.y) }?.let { onDrill(it.node) }
+                    rects.firstOrNull { it.contains(pos.x, pos.y) }?.let { onTap(it.node) }
                 }
             },
     ) {
