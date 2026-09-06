@@ -117,6 +117,7 @@ fun NavHost(navigator: Navigator) {
         is Screen.SqliteViewer -> com.apex.files.ui.screens.sqlite.SqliteScreen(s.node)
         is Screen.Logcat -> com.apex.files.ui.screens.logcat.LogcatScreen()
         is Screen.AudioPlayer -> com.apex.files.ui.screens.viewer.AudioPlayerScreen(s.nodes, s.index)
+        is Screen.Wifi -> com.apex.files.ui.screens.wifi.WifiScreen()
         is Screen.About -> com.apex.files.ui.screens.about.AboutScreen()
         is Screen.Trash -> com.apex.files.ui.screens.trash.TrashScreen()
         is Screen.BatchRename -> com.apex.files.ui.screens.rename.BatchRenameScreen(s.nodes)

@@ -36,6 +36,8 @@ sealed class Screen {
     /** In-app audio player: [nodes] are the neighboring audio tracks and
      *  [index] the track to start from (next/prev move through the list). */
     data class AudioPlayer(val nodes: List<FileNode>, val index: Int = 0, override val serial: Int = 0) : Screen()
+    /** Local Wi-Fi analyzer: connection, link/theoretical speed, signal and LAN devices. */
+    data object Wifi : Screen()
     data object About : Screen()
     /** Per-volume recycle bin with restore / permanent delete / empty. */
     data object Trash : Screen()
@@ -94,6 +96,7 @@ class Navigator(initial: Screen = Screen.Home) {
         is Screen.PdfViewer -> screen.copy(serial = n)
         is Screen.ArchiveViewer -> screen.copy(serial = n)
         is Screen.AudioPlayer -> screen.copy(serial = n)
+        is Screen.Wifi -> screen
         is Screen.SqliteViewer -> screen.copy(serial = n)
         is Screen.Logcat -> screen
         is Screen.About -> screen

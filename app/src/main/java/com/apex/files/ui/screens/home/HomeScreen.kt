@@ -1,7 +1,9 @@
 package com.apex.files.ui.screens.home
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Bolt
@@ -26,17 +30,17 @@ import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -54,7 +58,6 @@ import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
-import com.apex.files.data.model.Location
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.NodeOpener
@@ -67,6 +70,10 @@ import com.apex.files.ui.theme.ApexTextMuted
 import com.apex.files.ui.theme.MonoTextStyleSmall
 import java.io.File
 
+/**
+ * Home dashboard: compact storage hero, quick tools (including the Wi-Fi
+ * analyzer), smart suggestions, categories, favorites, recents and drives.
+ */
 @Composable
 fun HomeScreen() {
     val container = LocalContainer.current
@@ -80,8 +87,8 @@ fun HomeScreen() {
     fun openFavorite(node: FileNode) {
         if (node.isDir) {
             container.recents.record(node)
-            val location = node.uri?.let { Location.Saf(it, node.name) }
-                ?: Location.Fs(File(node.path))
+            val location = node.uri?.let { com.apex.files.data.model.Location.Saf(it, node.name) }
+                ?: com.apex.files.data.model.Location.Fs(File(node.path))
             navigator.push(Screen.Explorer(location))
         } else {
             NodeOpener.open(node, container, navigator, context) { msg ->
@@ -94,61 +101,78 @@ fun HomeScreen() {
         Modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
-        // ---- Premium header ----
+        // ---- Compact header ----
         item {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         "APEX",
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
                         "FILE MANAGER",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.6.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                ApexIconButton(Icons.Outlined.Search, "Buscar") {
-                    navigator.push(Screen.Search())
-                }
+                ApexIconButton(Icons.Outlined.Search, "Buscar") { navigator.push(Screen.Search()) }
                 ApexIconButton(Icons.Outlined.Refresh, "Actualizar") { vm.refresh() }
-                ApexIconButton(Icons.Outlined.Settings, "Ajustes") {
-                    navigator.push(Screen.Settings)
-                }
+                ApexIconButton(Icons.Outlined.Settings, "Ajustes") { navigator.push(Screen.Settings) }
             }
         }
 
-        // ---- Storage card ----
+        // ---- Storage hero (tap → stats) ----
         item {
-            ApexCard(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            ApexCard(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                onClick = { navigator.push(Screen.Stats) },
+                contentPadding = PaddingValues(14.dp),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.Storage,
-                        null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        "Almacenamiento",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    if (state.indexing) {
-                        Text("Indexando…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                RoundedCornerShape(10.dp),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Storage,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Almacenamiento",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        if (state.indexing) {
+                            Text("Indexando…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
+                        }
+                    }
+                    val percent = if (state.totalBytes > 0) ((state.usedBytes * 100) / state.totalBytes).toInt() else 0
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("$percent%", style = MonoTextStyleSmall, color = MaterialTheme.colorScheme.onBackground)
+                        Text("usado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
                 val fraction = if (state.totalBytes > 0) state.usedBytes.toFloat() / state.totalBytes else 0f
                 StorageBar(fraction)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 Row {
                     Text(
-                        "${SizeFormatter.format(state.usedBytes)} ${"de"} ${SizeFormatter.format(state.totalBytes)}",
+                        "${SizeFormatter.format(state.usedBytes)} de ${SizeFormatter.format(state.totalBytes)}",
                         style = MonoTextStyleSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
@@ -163,67 +187,35 @@ fun HomeScreen() {
         }
 
         // ---- Quick tools ----
-        item {
-            SectionLabel("Herramientas")
-        }
+        item { SectionLabel("Herramientas") }
         item {
             val tools = listOf(
-                ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Elimina carpetas vacías") { navigator.push(Screen.Cleaner) },
-                ToolSpec(Icons.Outlined.ContentCopy, "Buscador de Duplicados", "Detección por SHA-256") { navigator.push(Screen.Duplicates) },
+                ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Carpetas vacías") { navigator.push(Screen.Cleaner) },
+                ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) },
                 ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) },
-                ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") { navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot()))) },
+                ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
+                    navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot())))
+                },
             )
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 tools.chunked(2).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         row.forEach { spec ->
-                            ToolCard(spec.icon, spec.title, spec.subtitle, spec.onClick, Modifier.weight(1f))
+                            ToolTile(spec.icon, spec.title, spec.subtitle, spec.onClick, Modifier.weight(1f))
                         }
                     }
                 }
-                // Full-width row: system log console.
-                ToolCard(
-                    icon = Icons.Outlined.BugReport,
-                    title = "Consola de sistema",
-                    subtitle = "Registro logcat del dispositivo",
-                    onClick = { navigator.push(Screen.Logcat) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // Full-width row: Papelera (soft delete / restore).
-                ToolCard(
-                    icon = Icons.Outlined.DeleteSweep,
-                    title = "Papelera",
-                    subtitle = "Recupera elementos eliminados",
-                    onClick = { navigator.push(Screen.Trash) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        // ---- Storage insights ----
-        item {
-            ApexCard(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp),
-                onClick = { navigator.push(Screen.Stats) },
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Insights, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "Estadísticas de almacenamiento",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Text(
-                            "Tipos de archivo, tamaños y más grandes",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                FullWidthToolRow(Icons.Outlined.Wifi, "Analizador Wi-Fi", "Redes, señal y dispositivos") {
+                    navigator.push(Screen.Wifi)
+                }
+                FullWidthToolRow(Icons.Outlined.DeleteSweep, "Papelera", "Recupera elementos eliminados") {
+                    navigator.push(Screen.Trash)
+                }
+                FullWidthToolRow(Icons.Outlined.BugReport, "Consola de sistema", "Registro logcat del dispositivo") {
+                    navigator.push(Screen.Logcat)
                 }
             }
         }
@@ -233,14 +225,11 @@ fun HomeScreen() {
             item { SectionLabel("Sugerencias") }
             item {
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     state.largest.forEach { node ->
-                        SuggestionRow(
-                            node = node,
-                            onClick = { openFavorite(node) },
-                        )
+                        SuggestionRow(node = node, onClick = { openFavorite(node) })
                     }
                 }
             }
@@ -249,9 +238,7 @@ fun HomeScreen() {
         // ---- Categories ----
         item { SectionLabel("Categorías") }
         item {
-            // Adaptive column count (min tile ~104dp) with content-sized rows:
-            // no fixed heights, so nothing clips or overlaps at any font scale.
-            val columns = ((LocalConfiguration.current.screenWidthDp - 40) / 104).coerceIn(2, 6)
+            val columns = ((LocalConfiguration.current.screenWidthDp - 42) / 104).coerceIn(2, 6)
             val entries = listOf(
                 Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"),
                 Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"),
@@ -260,7 +247,7 @@ fun HomeScreen() {
                 Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"),
             )
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 entries.chunked(columns).forEach { row ->
@@ -285,8 +272,8 @@ fun HomeScreen() {
             item { SectionLabel("Favoritos") }
             item {
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     favorites.forEach { favorite ->
                         FavoriteCard(
@@ -303,7 +290,7 @@ fun HomeScreen() {
         if (recents.isNotEmpty()) {
             item {
                 Row(
-                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp),
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SectionLabel("Recientes", modifier = Modifier.weight(1f))
@@ -314,8 +301,8 @@ fun HomeScreen() {
             }
             item {
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     recents.forEach { entry ->
                         RecentRow(
@@ -333,26 +320,26 @@ fun HomeScreen() {
         item { SectionLabel("Unidades") }
         item {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 for (drive in state.drives) {
                     ApexCard(
                         Modifier.fillMaxWidth(),
-                        onClick = {
-                            navigator.push(Screen.Explorer(drive.location))
-                        },
+                        onClick = { navigator.push(Screen.Explorer(drive.location)) },
+                        contentPadding = PaddingValues(12.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Outlined.Storage,
                                 null,
                                 tint = if (drive.removable) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 drive.name,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
@@ -364,6 +351,7 @@ fun HomeScreen() {
                 ApexCard(
                     Modifier.fillMaxWidth(),
                     onClick = { navigator.push(Screen.Drives) },
+                    contentPadding = PaddingValues(12.dp),
                 ) {
                     Text(
                         "Gestionar unidades · USB-OTG",
@@ -385,19 +373,19 @@ private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
             letterSpacing = 1.2.sp,
         ),
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = 20.dp, top = 22.dp, bottom = 10.dp),
+        modifier = modifier.padding(start = 16.dp, top = 18.dp, bottom = 8.dp),
     )
 }
 
-/** Suggestion row: one of the largest files, tappable to open it. */
+/** Compact suggestion row: one of the largest files, tappable to open it. */
 @Composable
 private fun SuggestionRow(
     node: FileNode,
     onClick: () -> Unit,
 ) {
-    ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
+    ApexCard(Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FileIcon(node.category, node.isDir, Modifier.size(24.dp), size = 20.dp)
+            FileIcon(node.category, node.isDir, Modifier.size(22.dp), size = 18.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -419,31 +407,75 @@ private fun SuggestionRow(
     }
 }
 
+/** Compact two-per-row tool tile (icon, title, one-line subtitle). */
 @Composable
-private fun ToolCard(
+private fun ToolTile(
     icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ApexCard(onClick = onClick, modifier = modifier) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(22.dp).width(22.dp))
+    ApexCard(onClick = onClick, modifier = modifier, contentPadding = PaddingValues(12.dp)) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.height(8.dp))
         Text(
             title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             subtitle,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/** Slim horizontal full-width entry (icon left, title/subtitle, chevron). */
+@Composable
+private fun FullWidthToolRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    ApexCard(
+        Modifier.fillMaxWidth(),
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForward,
+                null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
     }
 }
 
@@ -453,12 +485,12 @@ private fun FavoriteCard(
     onClick: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
+    ApexCard(Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (node.isDir) {
-                Icon(Icons.Outlined.Star, null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Outlined.Star, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             } else {
-                FileIcon(node.category, false, Modifier.size(22.dp), size = 20.dp)
+                FileIcon(node.category, false, Modifier.size(20.dp), size = 18.dp)
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
@@ -492,9 +524,9 @@ private fun RecentRow(
     onClick: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    ApexCard(Modifier.fillMaxWidth(), onClick = onClick) {
+    ApexCard(Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FileIcon(node.category, node.isDir, Modifier.size(28.dp), size = 18.dp)
+            FileIcon(node.category, node.isDir, Modifier.size(26.dp), size = 16.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -540,7 +572,7 @@ private fun CategoryTile(
     modifier: Modifier = Modifier,
 ) {
     ApexCard(onClick = onClick, modifier = modifier, contentPadding = PaddingValues(10.dp)) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp).width(20.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
         Spacer(Modifier.height(6.dp))
         Text(
             label,

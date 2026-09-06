@@ -21,13 +21,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.OpProgress
 import com.apex.files.core.OpType
@@ -100,8 +100,8 @@ fun OperationCenter(
     modifier: Modifier = Modifier,
     onDone: (Boolean) -> Unit = {},
 ) {
-    val active by center.active.collectAsState()
-    val progress by center.progress.collectAsState()
+    val active by center.active.collectAsStateWithLifecycle()
+    val progress by center.progress.collectAsStateWithLifecycle()
 
     AnimatedVisibility(
         visible = active,

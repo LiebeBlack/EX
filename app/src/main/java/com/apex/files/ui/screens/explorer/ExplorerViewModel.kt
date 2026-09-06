@@ -17,12 +17,14 @@ import com.apex.files.data.model.SortOrder
 import com.apex.files.data.model.ViewMode
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class ExplorerViewModel(
@@ -107,9 +109,14 @@ class ExplorerViewModel(
 
     // ------------------------------------------------------------ browsing
 
+    private var refreshJob: Job? = null
+
     fun refresh() {
         val cur = _state.value.current ?: return
-        viewModelScope.launch {
+        // Cancel the in-flight listing so a slow read of a previous folder
+        // can never overwrite the entries of the folder the user is seeing.
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             val s = _state.value
             val entries = try {
@@ -517,7 +524,9 @@ class ExplorerViewModel(
         _state.update { it.copy(properties = it.properties?.copy(computingHash = true)) }
         viewModelScope.launch(Dispatchers.IO) {
             val stream = container.fs.openInputStream(node)
-            val hash = stream?.use { HashUtil.hash(it, algorithm) { true } }
+            // Wire real coroutine cancellation so hashing a huge file stops
+            // promptly when the sheet closes instead of reading to the end.
+            val hash = stream?.use { HashUtil.hash(it, algorithm) { isActive } }
             _state.update {
                 it.copy(
                     properties = it.properties?.copy(

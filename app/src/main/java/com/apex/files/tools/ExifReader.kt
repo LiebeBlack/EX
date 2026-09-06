@@ -38,8 +38,24 @@ object ExifReader {
         val hasLocation: Boolean get() = latitude != null && longitude != null
     }
 
+    /**
+     * Reads only the header of the image (the EXIF APP1 block always lives
+     * in the leading segments, before the pixel data), so opening a huge
+     * photo never loads the whole file into RAM.
+     */
     fun read(file: File): ExifData = try {
-        FileInputStream(file).use { read(it.readBytes()) }
+        FileInputStream(file).use { input ->
+            val head = ByteArray(
+                minOf(file.length().coerceAtLeast(0L), MAX_HEADER_BYTES.toLong()).toInt()
+            )
+            var n = 0
+            while (n < head.size) {
+                val read = input.read(head, n, head.size - n)
+                if (read < 0) break
+                n += read
+            }
+            read(head.copyOf(n))
+        }
     } catch (e: Exception) {
         ExifData()
     }
@@ -259,6 +275,9 @@ object ExifReader {
             return d + m / 60.0 + s / 3600.0
         }
     }
+
+    /** Maximum bytes scanned from the start of a JPEG (covers every APP1). */
+    private const val MAX_HEADER_BYTES = 2 * 1024 * 1024
 
     // ------------------------------------------------------------ helpers
 

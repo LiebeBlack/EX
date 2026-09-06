@@ -374,7 +374,7 @@ fun ExplorerScreen(location: Location) {
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            items(visible, key = { it.path }) { node ->
+                            items(visible, key = { it.path }, contentType = { it.isDir }) { node ->
                                 FileRow(
                                     node = node,
                                     selected = node.path in state.selection,
@@ -401,7 +401,7 @@ fun ExplorerScreen(location: Location) {
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(visible, key = { it.path }) { node ->
+                            items(visible, key = { it.path }, contentType = { it.isDir }) { node ->
                                 GridTile(
                                     node = node,
                                     selected = node.path in state.selection,

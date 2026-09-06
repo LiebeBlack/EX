@@ -2,6 +2,7 @@ package com.apex.files.data.fs
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.core.content.FileProvider
 import com.apex.files.core.OpProgress
 import com.apex.files.core.OpType
@@ -148,6 +149,11 @@ class FsRepository(private val context: Context) {
     ): OpResult {
         val srcFile = File(src.path)
         if (!srcFile.exists()) return OpResult()
+        // A file must never be copied onto itself (OVERWRITE would truncate
+        // the source before the copy starts).
+        if (!src.isDir && File(destDir.path, srcFile.name).absolutePath == srcFile.absolutePath) {
+            return OpResult(skipped = 1, firstError = "El archivo ya está en la carpeta de destino")
+        }
         if (src.isDir) {
             val dest = File(destDir.path)
             if (TransferGuard.isInsideOrSelf(dest, srcFile)) {
@@ -571,8 +577,10 @@ class FsRepository(private val context: Context) {
         onProgress: suspend (OpProgress) -> Unit,
         onConflict: (suspend (Conflict) -> ConflictDecision)? = null,
     ): OpResult = withContext(Dispatchers.IO) {
-        require(sources.all { it.uri == null } && destDir.uri == null) {
-            "La compresión a SAF aún no está soportada"
+        // SAF destinations are not supported yet: report it as an honest
+        // result instead of throwing (throwing surfaces as a raw failure).
+        if (sources.any { it.uri != null } || destDir.uri != null) {
+            return@withContext OpResult(errors = 1, firstError = "La compresión a almacenamiento SAF aún no está soportada")
         }
         if (sources.isEmpty()) return@withContext OpResult()
         val base = File(destDir.path)
@@ -818,7 +826,15 @@ class FsRepository(private val context: Context) {
         private val onProgress: suspend (OpProgress) -> Unit,
     ) {
         private val tracker = SpeedTracker()
+        private var lastEmitAt = 0L
         suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
+            // Throttle UI updates to ~10 Hz; a big copy otherwise pushes one
+            // progress event per 64 KB chunk (tens of thousands of frames).
+            val isFinal = bytesDone == bytesTotal ||
+                (bytesTotal == null && filesTotal != null && filesDone == filesTotal)
+            val now = SystemClock.uptimeMillis()
+            if (!isFinal && now - lastEmitAt < 100L) return
+            lastEmitAt = now
             val speed = tracker.update(bytesDone)
             onProgress(OpProgress(type, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }

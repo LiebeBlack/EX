@@ -2,6 +2,7 @@ package com.apex.files.data.fs
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import com.apex.files.core.OpProgress
@@ -477,7 +478,15 @@ class SafRepository(private val context: Context) {
         private val onProgress: suspend (OpProgress) -> Unit,
     ) {
         private val tracker = SpeedTracker()
+        private var lastEmitAt = 0L
         suspend fun emit(bytesDone: Long, bytesTotal: Long?, filesDone: Int = 0, filesTotal: Int? = null, current: String = "") {
+            // Throttle UI updates to ~10 Hz; a big copy otherwise pushes one
+            // progress event per 64 KB chunk (tens of thousands of frames).
+            val isFinal = bytesDone == bytesTotal ||
+                (bytesTotal == null && filesTotal != null && filesDone == filesTotal)
+            val now = SystemClock.uptimeMillis()
+            if (!isFinal && now - lastEmitAt < 100L) return
+            lastEmitAt = now
             val speed = tracker.update(bytesDone)
             onProgress(OpProgress(type, bytesDone, bytesTotal, filesDone, filesTotal, current, speed))
         }
