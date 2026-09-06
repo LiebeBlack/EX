@@ -174,7 +174,15 @@ class TrashManager(
     private fun writeMeta(itemDir: File, originalPath: String, trashedAt: Long) {
         runCatching {
             val encoded = URLEncoder.encode(originalPath, "UTF-8")
-            File(itemDir, META_FILE).writeText("$encoded\n$trashedAt\n", Charsets.UTF_8)
+            val content = "$encoded\n$trashedAt\n"
+            // Atomic write: temp file + rename, so a crash mid-write never
+            // leaves a half-written meta file that would break restore.
+            val tmp = File(itemDir, "$META_FILE.tmp")
+            tmp.writeText(content, Charsets.UTF_8)
+            if (!tmp.renameTo(File(itemDir, META_FILE))) {
+                File(itemDir, META_FILE).writeText(content, Charsets.UTF_8)
+                runCatching { tmp.delete() }
+            }
         }
     }
 

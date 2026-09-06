@@ -5,6 +5,8 @@ import com.apex.files.data.fs.Paths
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.SortOrder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -26,6 +28,7 @@ class EmptyCleaner(private val fs: FsRepository) {
     fun scan(root: FileNode): Flow<CleanerScan> = flow {
         val candidates = ArrayList<FileNode>()
         suspend fun walk(dir: FileNode): Long {
+            currentCoroutineContext().ensureActive()
             val children = fs.list(dir, showHidden = true, sort = SortOrder.NAME)
             var sum = 0L
             for (child in children) {

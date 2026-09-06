@@ -115,7 +115,6 @@ fun NavHost(navigator: Navigator) {
         is Screen.PdfViewer -> com.apex.files.ui.screens.viewer.PdfViewerScreen(s.node)
         is Screen.ArchiveViewer -> com.apex.files.ui.screens.viewer.ArchiveViewerScreen(s.node)
         is Screen.SqliteViewer -> com.apex.files.ui.screens.sqlite.SqliteScreen(s.node)
-        is Screen.Logcat -> com.apex.files.ui.screens.logcat.LogcatScreen()
         is Screen.AudioPlayer -> com.apex.files.ui.screens.viewer.AudioPlayerScreen(s.nodes, s.index)
         is Screen.Wifi -> com.apex.files.ui.screens.wifi.WifiScreen()
         is Screen.About -> com.apex.files.ui.screens.about.AboutScreen()

@@ -71,6 +71,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.Screen
+import com.apex.files.core.ListDensity
 import com.apex.files.core.OpType
 import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.fs.SizeFormatter
@@ -118,6 +119,8 @@ fun ExplorerScreen(location: Location) {
     var showFilter by remember { mutableStateOf(false) }
     var addMenuOpen by remember { mutableStateOf(false) }
     val trashEnabled by container.settings.trashEnabled.collectAsStateWithLifecycle()
+    val confirmPermanentDelete by container.settings.confirmPermanentDelete.collectAsStateWithLifecycle()
+    val selectionMode by vm.selectionMode.collectAsStateWithLifecycle()
 
     val toast: (String) -> Unit = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
 
@@ -130,9 +133,9 @@ fun ExplorerScreen(location: Location) {
     }
 
     // Internal back handling (selection / destination / directory up).
-    BackHandler(enabled = state.selectionMode || state.destMode != null || vm.canGoUp()) {
+    BackHandler(enabled = selectionMode || state.destMode != null || vm.canGoUp()) {
         when {
-            state.selectionMode -> vm.clearSelection()
+            selectionMode -> vm.clearSelection()
             state.destMode != null -> vm.cancelDestMode()
             else -> vm.goUp()
         }
@@ -193,7 +196,7 @@ fun ExplorerScreen(location: Location) {
     }
 
     // Single archive selected → the selection bar shows “Extraer aquí”.
-    val selected = state.entries.filter { it.path in state.selection }
+    val selected = vm.selectedNodes()
     val canExtract = selected.size == 1 && !selected[0].isDir && container.archive.isSupported(selected[0])
 
     Column(Modifier.fillMaxSize()) {
@@ -377,10 +380,11 @@ fun ExplorerScreen(location: Location) {
                             items(visible, key = { it.path }, contentType = { it.isDir }) { node ->
                                 FileRow(
                                     node = node,
-                                    selected = node.path in state.selection,
+                                    selected = vm.selection.containsKey(node.path),
+                                    compact = state.density == ListDensity.COMPACT,
                                     onClick = {
                                         when {
-                                            state.selectionMode -> vm.toggleSelect(node)
+                                            selectionMode -> vm.toggleSelect(node)
                                             state.destMode != null -> if (node.isDir) vm.openDir(node)
                                             node.isDir -> vm.openDir(node)
                                             else -> openFile(node)
@@ -395,7 +399,13 @@ fun ExplorerScreen(location: Location) {
                         }
                     } else {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 104.dp),
+                            columns = GridCells.Adaptive(
+                                minSize = when (state.density) {
+                                    ListDensity.COMPACT -> 88.dp
+                                    ListDensity.NORMAL -> 104.dp
+                                    ListDensity.COMFORTABLE -> 120.dp
+                                },
+                            ),
                             Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -404,10 +414,11 @@ fun ExplorerScreen(location: Location) {
                             items(visible, key = { it.path }, contentType = { it.isDir }) { node ->
                                 GridTile(
                                     node = node,
-                                    selected = node.path in state.selection,
+                                    selected = vm.selection.containsKey(node.path),
+                                    compact = state.density == ListDensity.COMPACT,
                                     onClick = {
                                         when {
-                                            state.selectionMode -> vm.toggleSelect(node)
+                                            selectionMode -> vm.toggleSelect(node)
                                             state.destMode != null -> if (node.isDir) vm.openDir(node)
                                             node.isDir -> vm.openDir(node)
                                             else -> openFile(node)
@@ -426,7 +437,7 @@ fun ExplorerScreen(location: Location) {
         }
 
         // Folder summary bar (hidden while selecting / pasting).
-        if (!state.selectionMode && state.destMode == null && state.entries.isNotEmpty()) {
+        if (!selectionMode && state.destMode == null && state.entries.isNotEmpty()) {
             val folders = state.entries.count { it.isDir }
             val files = state.entries.size - folders
             val bytes = state.entries.filterNot { it.isDir }.sumOf { it.size }
@@ -459,9 +470,9 @@ fun ExplorerScreen(location: Location) {
             }
         }
 
-        if (state.selectionMode && state.destMode == null) {
+        if (selectionMode && state.destMode == null) {
             SelectionBar(
-                count = state.selection.size,
+                count = vm.selection.size,
                 onCopy = { vm.startDestMode(ExplorerViewModel.DestMode.COPY) },
                 onSelectAll = { vm.selectAll() },
                 onMove = { vm.startDestMode(ExplorerViewModel.DestMode.MOVE) },
@@ -470,7 +481,16 @@ fun ExplorerScreen(location: Location) {
                     if (sel.size == 1) showRenameDialog = true
                     else if (sel.size > 1) navigator.push(Screen.BatchRename(sel))
                 },
-                onDelete = { showDeleteConfirm = true },
+                onDelete = {
+                    // Trash-safe deletes always confirm; permanent deletes
+                    // (SAF items or trash off) skip it when disabled.
+                    val permanent = !trashEnabled || vm.selectedNodes().any { it.uri != null }
+                    if (permanent && !confirmPermanentDelete) {
+                        launchOperation(OpType.DELETE, vm.deleteFlow())
+                    } else {
+                        showDeleteConfirm = true
+                    }
+                },
                 onShare = { shareSelected() },
                 onCompress = { showCompressDialog = true },
                 onProperties = { vm.selectedNodes().firstOrNull()?.let(vm::showProperties) },
@@ -492,10 +512,10 @@ fun ExplorerScreen(location: Location) {
                     "$trashable elemento(s) irá(n) a la Papelera (se pueden restaurar). " +
                         "Los elementos SAF se eliminarán de forma permanente."
                 } else {
-                    "${state.selection.size} elemento(s) se moverá(n) a la Papelera. Se pueden restaurar desde Inicio → Papelera."
+                    "${vm.selection.size} elemento(s) se moverá(n) a la Papelera. Se pueden restaurar desde Inicio → Papelera."
                 }
             } else {
-                "Se eliminará ${state.selection.size} elemento(s) de forma permanente. Esta acción no se puede deshacer."
+                "Se eliminará ${vm.selection.size} elemento(s) de forma permanente. Esta acción no se puede deshacer."
             },
             confirmLabel = if (trashEnabled) "Mover a papelera" else "Eliminar",
             onConfirm = {

@@ -48,6 +48,7 @@ fun GridTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val shape = ApexShapes.medium
     // Selected tiles get a primary-tinted fill (surfaceVariant is the base
@@ -69,7 +70,7 @@ fun GridTile(
                 shape,
             )
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(8.dp),
+            .padding(if (compact) 5.dp else 8.dp),
     ) {
         Box(
             Modifier
@@ -92,7 +93,7 @@ fun GridTile(
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                 )
             } else {
-                FileIcon(node.category, node.isDir, Modifier.size(44.dp), size = 30.dp)
+                FileIcon(node.category, node.isDir, Modifier.size(if (compact) 36.dp else 44.dp), size = if (compact) 24.dp else 30.dp)
             }
             if (selected) {
                 Icon(

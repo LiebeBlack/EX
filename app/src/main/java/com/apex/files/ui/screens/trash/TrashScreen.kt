@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.TrashManager
+import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
@@ -59,6 +60,8 @@ fun TrashScreen() {
     val context = LocalContext.current
     val vm: TrashViewModel = apexViewModel(key = "trash") { c -> TrashViewModel(c) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val container = LocalContainer.current
+    val confirmPermanentDelete by container.settings.confirmPermanentDelete.collectAsStateWithLifecycle()
 
     var confirmEmpty by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<TrashManager.TrashEntry?>(null) }
@@ -81,7 +84,9 @@ fun TrashScreen() {
                         Icons.Outlined.DeleteSweep,
                         "Vaciar papelera",
                         tint = MaterialTheme.colorScheme.onBackground,
-                    ) { confirmEmpty = true }
+                    ) {
+                        if (confirmPermanentDelete) confirmEmpty = true else vm.empty()
+                    }
                 }
             },
         )
@@ -112,7 +117,9 @@ fun TrashScreen() {
                     TrashRow(
                         entry = entry,
                         onRestore = { vm.restore(entry) },
-                        onDelete = { pendingDelete = entry },
+                        onDelete = {
+                            if (confirmPermanentDelete) pendingDelete = entry else vm.deletePermanently(entry)
+                        },
                     )
                 }
             }

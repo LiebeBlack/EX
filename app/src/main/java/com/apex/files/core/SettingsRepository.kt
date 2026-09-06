@@ -27,6 +27,17 @@ enum class Accent(val hex: Long) {
     }
 }
 
+/** Row density for the explorer list and grid. */
+enum class ListDensity {
+    COMPACT,
+    NORMAL,
+    COMFORTABLE;
+
+    companion object {
+        fun fromName(name: String?): ListDensity = entries.firstOrNull { it.name == name } ?: NORMAL
+    }
+}
+
 /**
  * Thin SharedPreferences wrapper exposing settings as [StateFlow] so the
  * theme and the file browser react instantly. Zero extra dependencies.
@@ -69,6 +80,16 @@ class SettingsRepository(context: Context) {
     private val _trashEnabled = MutableStateFlow(prefs.getBoolean(KEY_TRASH_ENABLED, true))
     val trashEnabled: StateFlow<Boolean> = _trashEnabled.asStateFlow()
 
+    /** Explorer row density (compact / normal / comfortable). */
+    private val _density = MutableStateFlow(
+        ListDensity.fromName(prefs.getString(KEY_DENSITY, null))
+    )
+    val density: StateFlow<ListDensity> = _density.asStateFlow()
+
+    /** Ask for confirmation before permanent deletes (incl. emptying trash). */
+    private val _confirmPermanentDelete = MutableStateFlow(prefs.getBoolean(KEY_CONFIRM_PERMANENT_DELETE, true))
+    val confirmPermanentDelete: StateFlow<Boolean> = _confirmPermanentDelete.asStateFlow()
+
     fun setAccent(accent: Accent) {
         prefs.edit().putString(KEY_ACCENT, accent.name).apply()
         _accent.value = accent
@@ -106,6 +127,41 @@ class SettingsRepository(context: Context) {
         _trashEnabled.value = enabled
     }
 
+    fun setDensity(density: ListDensity) {
+        prefs.edit().putString(KEY_DENSITY, density.name).apply()
+        _density.value = density
+    }
+
+    fun setConfirmPermanentDelete(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CONFIRM_PERMANENT_DELETE, enabled).apply()
+        _confirmPermanentDelete.value = enabled
+    }
+
+    /** Restores every setting to its default value. */
+    fun resetAll() {
+        val edit = prefs.edit()
+        edit.remove(KEY_ACCENT)
+        edit.remove(KEY_CUSTOM_ACCENT)
+        edit.remove(KEY_SHOW_HIDDEN)
+        edit.remove(KEY_SORT)
+        edit.remove(KEY_SORT_DIRECTION)
+        edit.remove(KEY_VIEW_MODE)
+        edit.remove(KEY_TRASH_ENABLED)
+        edit.remove(KEY_DENSITY)
+        edit.remove(KEY_CONFIRM_PERMANENT_DELETE)
+        edit.apply()
+        // Reflect the defaults in memory immediately.
+        _accent.value = Accent.fromName(prefs.getString(KEY_ACCENT, null))
+        _customAccent.value = prefs.getLong(KEY_CUSTOM_ACCENT, Accent.CYAN.hex)
+        _showHidden.value = prefs.getBoolean(KEY_SHOW_HIDDEN, false)
+        _sortOrder.value = SortOrder.fromName(prefs.getString(KEY_SORT, null))
+        _sortDirection.value = SortDirection.fromName(prefs.getString(KEY_SORT_DIRECTION, null))
+        _viewMode.value = ViewMode.fromName(prefs.getString(KEY_VIEW_MODE, null))
+        _trashEnabled.value = prefs.getBoolean(KEY_TRASH_ENABLED, true)
+        _density.value = ListDensity.fromName(prefs.getString(KEY_DENSITY, null))
+        _confirmPermanentDelete.value = prefs.getBoolean(KEY_CONFIRM_PERMANENT_DELETE, true)
+    }
+
     private companion object {
         const val KEY_ACCENT = "accent"
         const val KEY_CUSTOM_ACCENT = "accent_custom"
@@ -114,5 +170,7 @@ class SettingsRepository(context: Context) {
         const val KEY_SORT_DIRECTION = "sort_direction"
         const val KEY_VIEW_MODE = "view_mode"
         const val KEY_TRASH_ENABLED = "trash_enabled"
+        const val KEY_DENSITY = "list_density"
+        const val KEY_CONFIRM_PERMANENT_DELETE = "confirm_permanent_delete"
     }
 }

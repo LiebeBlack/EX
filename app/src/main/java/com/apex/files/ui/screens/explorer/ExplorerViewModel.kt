@@ -1,10 +1,13 @@
 package com.apex.files.ui.screens.explorer
 
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.core.HashAlgorithm
 import com.apex.files.core.HashUtil
+import com.apex.files.core.ListDensity
 import com.apex.files.core.OpProgress
 import com.apex.files.core.OpType
 import com.apex.files.data.fs.CountResult
@@ -57,11 +60,9 @@ class ExplorerViewModel(
         val viewMode: ViewMode = ViewMode.LIST,
         val sort: SortOrder = SortOrder.NAME,
         val sortDir: SortDirection = SortDirection.ASC,
-        val selectionMode: Boolean = false,
-        val selection: Set<String> = emptySet(),
-        /** Anchor path for long-press range selection. */
-        val anchor: String? = null,
         val destMode: DestMode? = null,
+        /** Row density from settings (drives list/grid sizing). */
+        val density: ListDensity = ListDensity.NORMAL,
         /** Sources captured when “Copiar/Mover” was pressed, so navigating to
          *  the destination never loses the selection. */
         val pendingSources: List<FileNode> = emptyList(),
@@ -86,9 +87,24 @@ class ExplorerViewModel(
             viewMode = container.settings.viewMode.value,
             sort = container.settings.sortOrder.value,
             sortDir = container.settings.sortDirection.value,
+            density = container.settings.density.value,
         )
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    // ------------------------------------------------------------ selection
+
+    /** Whether multi-select mode is active (drives the selection bar). */
+    private val _selectionMode = MutableStateFlow(false)
+    val selectionMode: StateFlow<Boolean> = _selectionMode.asStateFlow()
+
+    /**
+     * Per-path selection map. Snapshot reads are keyed per path, so toggling
+     * one row only recomposes that row instead of the whole list.
+     */
+    val selection: SnapshotStateMap<String, Boolean> = mutableStateMapOf()
+
+    private var anchor: String? = null
 
     init {
         _state.update { it.copy(current = container.fs.rootNode(location)) }
@@ -103,6 +119,11 @@ class ExplorerViewModel(
             container.settings.sortDirection.collect { dir ->
                 _state.update { it.copy(sortDir = dir) }
                 refresh()
+            }
+        }
+        viewModelScope.launch {
+            container.settings.density.collect { d ->
+                _state.update { it.copy(density = d) }
             }
         }
     }
@@ -136,13 +157,11 @@ class ExplorerViewModel(
         val current = _state.value.current ?: return
         // Folder opens feed the Home “Recientes” quick access list.
         container.recents.record(node)
+        clearSelection()
         _state.update {
             it.copy(
                 ancestors = it.ancestors + current,
                 current = node,
-                selectionMode = false,
-                selection = emptySet(),
-                anchor = null,
             )
         }
         refresh()
@@ -152,13 +171,11 @@ class ExplorerViewModel(
         val s = _state.value
         if (s.ancestors.isEmpty()) return
         val parent = s.ancestors.last()
+        clearSelection()
         _state.update {
             it.copy(
                 ancestors = it.ancestors.dropLast(1),
                 current = parent,
-                selectionMode = false,
-                selection = emptySet(),
-                anchor = null,
             )
         }
         refresh()
@@ -169,13 +186,11 @@ class ExplorerViewModel(
     fun navigateTo(ancestor: FileNode) {
         val idx = _state.value.ancestors.indexOfFirst { it.path == ancestor.path }
         if (idx < 0) return
+        clearSelection()
         _state.update {
             it.copy(
                 ancestors = it.ancestors.take(idx),
                 current = ancestor,
-                selectionMode = false,
-                selection = emptySet(),
-                anchor = null,
             )
         }
         refresh()
@@ -208,7 +223,10 @@ class ExplorerViewModel(
     // ---------------------------------------------------------- selection
 
     fun enterSelection(node: FileNode) {
-        _state.update { it.copy(selectionMode = true, selection = setOf(node.path), anchor = node.path) }
+        selection.clear()
+        selection[node.path] = true
+        anchor = node.path
+        _selectionMode.value = true
     }
 
     /**
@@ -218,9 +236,8 @@ class ExplorerViewModel(
      * single selection.
      */
     fun longPress(node: FileNode) {
-        val s = _state.value
-        val anchorPath = s.anchor
-        if (s.selectionMode && anchorPath != null && anchorPath != node.path) {
+        val anchorPath = anchor
+        if (_selectionMode.value && anchorPath != null && anchorPath != node.path) {
             selectRange(anchorPath, node.path)
         } else {
             enterSelection(node)
@@ -228,40 +245,44 @@ class ExplorerViewModel(
     }
 
     fun selectRange(from: String, to: String) {
-        _state.update { s ->
-            val paths = s.entries.map { it.path }
-            val a = paths.indexOf(from)
-            val b = paths.indexOf(to)
-            if (a < 0 || b < 0) {
-                s.copy(selection = s.selection + to, anchor = to)
-            } else {
-                val range = if (a <= b) paths.subList(a, b + 1) else paths.subList(b, a + 1)
-                s.copy(selection = s.selection + range.toSet(), selectionMode = true, anchor = to)
-            }
+        val paths = _state.value.entries.map { it.path }
+        val a = paths.indexOf(from)
+        val b = paths.indexOf(to)
+        if (a < 0 || b < 0) {
+            selection[to] = true
+        } else {
+            val range = if (a <= b) paths.subList(a, b + 1) else paths.subList(b, a + 1)
+            range.forEach { selection[it.path] = true }
         }
+        anchor = to
+        _selectionMode.value = true
     }
 
     fun toggleSelect(node: FileNode) {
-        _state.update { s ->
-            val sel = s.selection.toMutableSet()
-            if (!sel.add(node.path)) sel.remove(node.path)
-            s.copy(selection = sel, selectionMode = sel.isNotEmpty(), anchor = if (sel.isNotEmpty()) s.anchor else null)
+        if (selection[node.path] == true) {
+            selection.remove(node.path)
+        } else {
+            selection[node.path] = true
         }
+        _selectionMode.value = selection.isNotEmpty()
+        if (selection.isEmpty()) anchor = null
     }
 
     fun selectAll() {
-        _state.update { it.copy(selection = it.entries.map { n -> n.path }.toSet(), selectionMode = true) }
+        selection.clear()
+        _state.value.entries.forEach { selection[it.path] = true }
+        _selectionMode.value = true
     }
 
     fun clearSelection() {
-        _state.update { it.copy(selectionMode = false, selection = emptySet(), anchor = null) }
+        selection.clear()
+        anchor = null
+        _selectionMode.value = false
     }
 
     /** Currently selected nodes (from the visible entries). */
-    fun selectedNodes(): List<FileNode> {
-        val sel = _state.value.selection
-        return _state.value.entries.filter { it.path in sel }
-    }
+    fun selectedNodes(): List<FileNode> =
+        _state.value.entries.filter { selection[it.path] == true }
 
     // --------------------------------------------------------- operations
 
@@ -269,13 +290,11 @@ class ExplorerViewModel(
     fun startDestMode(mode: DestMode) {
         val sources = selectedNodes()
         if (sources.isEmpty()) return
+        clearSelection()
         _state.update {
             it.copy(
                 destMode = mode,
                 pendingSources = sources,
-                selectionMode = false,
-                selection = emptySet(),
-                anchor = null,
             )
         }
     }

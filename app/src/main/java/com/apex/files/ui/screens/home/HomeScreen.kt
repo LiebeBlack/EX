@@ -22,7 +22,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -43,6 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -66,6 +68,7 @@ import com.apex.files.ui.components.ApexCard
 import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.FileIcon
 import com.apex.files.ui.components.StorageBar
+import com.apex.files.ui.components.WelcomeTour
 import com.apex.files.ui.theme.ApexTextMuted
 import com.apex.files.ui.theme.MonoTextStyleSmall
 import java.io.File
@@ -83,6 +86,10 @@ fun HomeScreen() {
     val state by vm.state.collectAsStateWithLifecycle()
     val favorites by container.favorites.items.collectAsStateWithLifecycle()
     val recents by container.recents.items.collectAsStateWithLifecycle()
+
+    // First run: show the welcome tour once (replayable from Ajustes).
+    val onboarding = container.onboarding
+    var showTour by remember { mutableStateOf(!onboarding.tourSeen) }
 
     fun openFavorite(node: FileNode) {
         if (node.isDir) {
@@ -189,14 +196,14 @@ fun HomeScreen() {
         // ---- Quick tools ----
         item { SectionLabel("Herramientas") }
         item {
-            val tools = listOf(
+            val tools = remember { listOf(
                 ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Carpetas vacías") { navigator.push(Screen.Cleaner) },
                 ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) },
                 ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) },
                 ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
                     navigator.push(Screen.SpaceAnalyzer(com.apex.files.data.model.Location.Fs(com.apex.files.data.fs.Paths.internalRoot())))
                 },
-            )
+            ) }
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -213,9 +220,6 @@ fun HomeScreen() {
                 }
                 FullWidthToolRow(Icons.Outlined.DeleteSweep, "Papelera", "Recupera elementos eliminados") {
                     navigator.push(Screen.Trash)
-                }
-                FullWidthToolRow(Icons.Outlined.BugReport, "Consola de sistema", "Registro logcat del dispositivo") {
-                    navigator.push(Screen.Logcat)
                 }
             }
         }
@@ -361,6 +365,13 @@ fun HomeScreen() {
                 }
             }
         }
+    }
+
+    if (showTour) {
+        WelcomeTour(onFinish = {
+            showTour = false
+            onboarding.markTourSeen()
+        })
     }
 }
 

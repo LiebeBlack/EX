@@ -25,8 +25,11 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.SettingsBackupRestore
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.Visibility
@@ -38,9 +41,11 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,12 +57,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apex.files.BuildConfig
 import com.apex.files.Screen
 import com.apex.files.core.Accent
+import com.apex.files.core.ListDensity
+import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.SortDirection
+import com.apex.files.data.model.SortOrder
 import com.apex.files.data.model.ViewMode
+import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
 import com.apex.files.ui.components.ApexTopBar
+import com.apex.files.ui.components.ConfirmDialog
+import kotlinx.coroutines.launch
 import com.apex.files.ui.theme.ApexBorder
 import com.apex.files.ui.theme.ApexContainerHigh
 import com.apex.files.ui.theme.ApexCustomAccentPalette
@@ -74,7 +85,17 @@ fun SettingsScreen() {
     val sortDirection by vm.sortDirection.collectAsStateWithLifecycle()
     val trashEnabled by vm.trashEnabled.collectAsStateWithLifecycle()
     val viewMode by vm.viewMode.collectAsStateWithLifecycle()
+    val sortOrder by vm.sortOrder.collectAsStateWithLifecycle()
+    val density by vm.density.collectAsStateWithLifecycle()
+    val confirmPermanentDelete by vm.confirmPermanentDelete.collectAsStateWithLifecycle()
+
+    val container = LocalContainer.current
+    val scope = rememberCoroutineScope()
+    var cacheSize by remember { mutableStateOf(0L) }
     var showCustomDialog by remember { mutableStateOf(false) }
+    var showResetConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { cacheSize = vm.thumbnailCacheBytes() }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -251,6 +272,144 @@ fun SettingsScreen() {
                 }
             }
 
+            // Default sort order
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.SwapVert, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Orden por defecto", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Criterio aplicado al abrir una carpeta",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DirectionChip("Nombre", sortOrder == SortOrder.NAME) { vm.setSortOrder(SortOrder.NAME) }
+                    DirectionChip("Tamaño", sortOrder == SortOrder.SIZE) { vm.setSortOrder(SortOrder.SIZE) }
+                    DirectionChip("Fecha", sortOrder == SortOrder.DATE) { vm.setSortOrder(SortOrder.DATE) }
+                }
+            }
+
+            // List density
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Outlined.ViewList, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Densidad de la lista", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Ajusta el tamaño de las filas y la cuadrícula",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DirectionChip("Compacta", density == ListDensity.COMPACT) { vm.setDensity(ListDensity.COMPACT) }
+                    DirectionChip("Normal", density == ListDensity.NORMAL) { vm.setDensity(ListDensity.NORMAL) }
+                    DirectionChip("Amplia", density == ListDensity.COMFORTABLE) { vm.setDensity(ListDensity.COMFORTABLE) }
+                }
+            }
+
+            // Permanent-delete confirmation
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.DeleteSweep, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Confirmar borrado permanente", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Pide confirmación antes de borrar de forma permanente y de vaciar la papelera",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = confirmPermanentDelete,
+                        onCheckedChange = vm::setConfirmPermanentDelete,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = ApexBorder,
+                            uncheckedBorderColor = ApexBorder,
+                        ),
+                    )
+                }
+            }
+
+            // Thumbnail cache manager
+            ApexCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Miniaturas (caché)", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Caché local de imágenes · ${SizeFormatter.format(cacheSize)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                vm.clearThumbnailCache()
+                                cacheSize = vm.thumbnailCacheBytes()
+                            }
+                        },
+                    ) {
+                        Text("Limpiar", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            // Welcome tour replay
+            ApexCard(
+                Modifier.fillMaxWidth(),
+                onClick = {
+                    container.onboarding.resetTour()
+                    navigator.popToRoot()
+                },
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.HelpOutline, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Ver guía de bienvenida", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Muestra el tour de inicio de nuevo",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            // Reset settings
+            ApexCard(
+                Modifier.fillMaxWidth(),
+                onClick = { showResetConfirm = true },
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.SettingsBackupRestore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Restablecer ajustes", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Vuelve a los valores por defecto",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
             // Benchmark
             ApexCard(
                 Modifier.fillMaxWidth(),
@@ -306,6 +465,20 @@ fun SettingsScreen() {
                 showCustomDialog = false
             },
             onDismiss = { showCustomDialog = false },
+        )
+    }
+    if (showResetConfirm) {
+        ConfirmDialog(
+            title = "Restablecer ajustes",
+            message = "Se restaurarán el tema, el orden, la papelera y las preferencias de la interfaz. La guía de bienvenida se mostrará de nuevo.",
+            confirmLabel = "Restablecer",
+            destructive = false,
+            onConfirm = {
+                showResetConfirm = false
+                vm.resetSettings()
+                container.onboarding.resetTour()
+            },
+            onDismiss = { showResetConfirm = false },
         )
     }
 }

@@ -39,6 +39,8 @@ class AppContainer(context: Context) {
     val sqlite: SqliteRepository by lazy { SqliteRepository(appContext, fs) }
     val recents: RecentStore by lazy { RecentStore(appContext) }
     val favorites: FavoritesStore by lazy { FavoritesStore(appContext) }
+    /** First-run flags (welcome tour). */
+    val onboarding: OnboardingStore by lazy { OnboardingStore(appContext) }
     val mediaStore: MediaStoreRepository by lazy { MediaStoreRepository(appContext) }
     val drives: DrivesRepository by lazy { DrivesRepository(appContext) }
 
