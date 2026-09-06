@@ -36,6 +36,9 @@ class ExplorerViewModel(
     val location: Location,
 ) : ViewModel() {
 
+    /** Active directory size/count walk, cancelled on dismiss or restart. */
+    private var propertiesJob: Job? = null
+
     enum class DestMode { COPY, MOVE }
 
     data class PropertiesState(
@@ -582,6 +585,9 @@ class ExplorerViewModel(
     }
 
     fun dismissProperties() {
+        // Stop the recursive size/count walk when the sheet goes away.
+        propertiesJob?.cancel()
+        propertiesJob = null
         _state.update { it.copy(properties = null) }
     }
 
@@ -590,11 +596,17 @@ class ExplorerViewModel(
         val node = props.node
         if (node.isDir) {
             _state.update { it.copy(properties = it.properties?.copy(computingSize = true)) }
-            viewModelScope.launch {
+            // A directory size/count is a full recursive walk. Reopening the
+            // sheet must not stack a second walk over the running one, and
+            // closing it should stop the walk instead of burning I/O in the
+            // background for a sheet nobody is looking at.
+            propertiesJob?.cancel()
+            propertiesJob = viewModelScope.launch {
                 // Fallbacks: a revoked permission or I/O failure must not leave
                 // the sheet spinning on "Calculando…" forever.
                 val size = runCatching { container.fs.sizeOf(node) }.getOrDefault(0L)
                 val count = runCatching { container.fs.countEntries(node) }.getOrNull()
+                if (!isActive) return@launch
                 _state.update {
                     it.copy(
                         properties = it.properties?.copy(

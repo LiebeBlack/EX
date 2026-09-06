@@ -1,5 +1,6 @@
 package com.apex.files.data.search
 
+import com.apex.files.core.PerfMetrics
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.fs.Paths
 import java.io.File
@@ -30,6 +31,9 @@ class ContentIndexer(
         const val DEFAULT_CHUNK = 500
         private const val MAX_DEPTH = 12
 
+        /** Full-snapshot re-persist cadence for unbounded "Reindexar" runs. */
+        private const val SAVE_EVERY = 500
+
         /** Files whose raw text can be indexed directly (no OCR). */
         private val TEXT_EXTS = setOf(
             "txt", "md", "log", "json", "xml", "html", "htm", "csv", "ini", "cfg",
@@ -42,7 +46,7 @@ class ContentIndexer(
         private val IMAGE_EXTS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp", "heic", "heif")
     }
 
-    data class ChunkResult(val processed: Int, val more: Boolean)
+    data class ChunkResult(val processed: Int, val more: Boolean, val candidates: Int = 0)
 
     /** Processes up to [maxFiles] pending files. Blocking: call on IO. */
     suspend fun indexChunk(
@@ -50,30 +54,67 @@ class ContentIndexer(
         showHidden: Boolean,
         ocrEnabled: Boolean,
     ): ChunkResult = withContext(Dispatchers.IO) {
-        val candidates = collectCandidates(showHidden)
+        val candidates = PerfMetrics.time("content.candidates", detail = "chunk") {
+            collectCandidates(showHidden)
+        }
+        val chunkStart = System.nanoTime()
         var processed = 0
+        var text = 0
+        var pdf = 0
+        var ocr = 0
         for (f in candidates) {
             if (processed >= maxFiles) break
             currentCoroutineContext().ensureActive()
+            when (CategoryEngine.extensionOf(f.name)) {
+                in TEXT_EXTS -> text++
+                "pdf" -> pdf++
+                in IMAGE_EXTS -> if (ocrEnabled) ocr++
+            }
             extractAndPut(f, ocrEnabled)
             processed++
-            if (processed % 100 == 0) index.save()
         }
+        // One full-snapshot save per chunk: the snapshot can reach tens of MB,
+        // and the previous per-100-files cadence rewrote it up to 5x per chunk
+        // (≈250 MB of disk writes for a 50 MB index). Reads come from the
+        // in-memory map, so durability only needs one save per batch.
         index.save()
-        ChunkResult(processed, more = processed < candidates.size)
+        PerfMetrics.report(
+            "content.chunk",
+            (System.nanoTime() - chunkStart) / 1_000_000L,
+            count = processed,
+            detail = "text=$text pdf=$pdf ocr=$ocr candidates=${candidates.size}",
+        )
+        ChunkResult(processed, more = processed < candidates.size, candidates = candidates.size)
     }
 
     /** Indexes everything pending in one walk (user-triggered "Reindexar"). */
     suspend fun indexAll(showHidden: Boolean, ocrEnabled: Boolean) = withContext(Dispatchers.IO) {
         val candidates = collectCandidates(showHidden)
+        val start = System.nanoTime()
         var processed = 0
+        var text = 0
+        var pdf = 0
+        var ocr = 0
         for (f in candidates) {
             currentCoroutineContext().ensureActive()
+            // Unbounded run: periodic saves bound the redo work if the process
+            // dies mid-reindex, without hammering the disk every 100 files.
+            if (processed > 0 && processed % SAVE_EVERY == 0) index.save()
+            when (CategoryEngine.extensionOf(f.name)) {
+                in TEXT_EXTS -> text++
+                "pdf" -> pdf++
+                in IMAGE_EXTS -> if (ocrEnabled) ocr++
+            }
             extractAndPut(f, ocrEnabled)
             processed++
-            if (processed % 100 == 0) index.save()
         }
         index.save()
+        PerfMetrics.report(
+            "content.indexAll",
+            (System.nanoTime() - start) / 1_000_000L,
+            count = processed,
+            detail = "text=$text pdf=$pdf ocr=$ocr candidates=${candidates.size}",
+        )
     }
 
     /** Removes stale entries for paths that no longer exist (cheap prune). */

@@ -126,5 +126,6 @@ fun NavHost(navigator: Navigator) {
         is Screen.HexViewer -> com.apex.files.ui.screens.viewer.HexViewerScreen(s.node)
         is Screen.SmartGroups -> com.apex.files.ui.screens.smart.SmartGroupsScreen()
         is Screen.Cleanup -> com.apex.files.ui.screens.cleanup.CleanupScreen()
+        is Screen.Diagnostics -> com.apex.files.ui.screens.diagnostics.DiagnosticsScreen()
     }
 }

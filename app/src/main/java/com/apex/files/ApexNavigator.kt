@@ -46,6 +46,8 @@ sealed class Screen {
     data object SmartGroups : Screen()
     /** Junk analysis: orphan app dirs, caches and temp files. */
     data object Cleanup : Screen()
+    /** Internal perf metrics + index footprints (hidden long-press in About). */
+    data object Diagnostics : Screen()
 }
 
 /**
@@ -105,5 +107,6 @@ class Navigator(initial: Screen = Screen.Home) {
         is Screen.HexViewer -> screen.copy(serial = n)
         is Screen.SmartGroups -> screen
         is Screen.Cleanup -> screen
+        is Screen.Diagnostics -> screen
     }
 }

@@ -1,6 +1,7 @@
 package com.apex.files.data.search
 
 import android.content.Context
+import com.apex.files.core.PerfMetrics
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -47,6 +48,9 @@ class ContentIndex(context: Context) : ContentTextSource {
     private var dirty = false
 
     val size: Int get() = map.size
+
+    /** On-disk size of the last persisted snapshot (0 when never saved). */
+    fun snapshotBytes(): Long = if (file.exists()) file.length() else 0L
 
     fun get(path: String): Entry? = map[path]
 
@@ -105,6 +109,10 @@ class ContentIndex(context: Context) : ContentTextSource {
     /** Atomically replaces the snapshot. Blocking: IO. */
     fun save() {
         if (!dirty) return
+        PerfMetrics.time("content.save", countOf = { map.size }) { saveEntries() }
+    }
+
+    private fun saveEntries() {
         try {
             val tmp = File(file.parentFile, file.name + ".tmp")
             tmp.bufferedWriter(Charsets.UTF_8).use { w ->

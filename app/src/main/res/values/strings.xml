@@ -127,7 +127,7 @@
     <string name="benchmark">Benchmark de almacenamiento</string>
     <string name="benchmark_desc">Mide la velocidad de lectura y escritura reales</string>
     <string name="about">Acerca de APEX</string>
-    <string name="zero_dep">Cero dependencias · Cero red · 100%% local</string>
+    <string name="zero_dep">Sin red · Sin servidor ni telemetría · 100%% local</string>
     <string name="version">Versión 1.0</string>
 
     <!-- Benchmark -->

@@ -175,7 +175,7 @@ fun HomeScreen() {
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         if (state.indexing) {
-                            Text("Indexando…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
+                            Text("Restaurando índice…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
                         }
                     }
                     val percent = if (state.totalBytes > 0) ((state.usedBytes * 100) / state.totalBytes).toInt() else 0

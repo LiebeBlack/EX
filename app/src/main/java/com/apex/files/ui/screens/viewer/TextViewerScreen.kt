@@ -350,6 +350,7 @@ private fun LineRow(
     content: String,
     lineStyle: TextStyle,
     color: androidx.compose.ui.graphics.Color,
+    softWrap: Boolean = false,
 ) {
     Row(Modifier.fillMaxWidth()) {
         Text(
@@ -362,12 +363,18 @@ private fun LineRow(
             content,
             style = lineStyle,
             color = color,
+            softWrap = softWrap,
+            maxLines = if (softWrap) Int.MAX_VALUE else 1,
             modifier = Modifier.weight(1f),
         )
     }
 }
 
-/** Wrap mode: one scroll container holding number + soft-wrapped content rows. */
+/**
+ * Wrap mode: one scroll container holding number + content rows. Wrapping is a
+ * [Text]-level concern (there is no [TextStyle] property for it), so [LineRow]
+ * takes an explicit flag instead of the shared style carrying it.
+ */
 @Composable
 private fun WrappedLines(
     lines: List<String>,
@@ -382,9 +389,8 @@ private fun WrappedLines(
             LineRow(
                 number = absolute + 1,
                 content = line.ifEmpty { " " },
-                // Wrapping is a Text-level concern (Text defaults to softWrap = true);
-                // TextStyle has no softWrap property.
                 lineStyle = lineStyle,
+                softWrap = true,
                 color = if (absolute in highlighted) {
                     MaterialTheme.colorScheme.primary
                 } else {

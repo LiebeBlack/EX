@@ -119,22 +119,23 @@ class MemoryIndex {
         limit: Int = 250,
     ): List<FileNode> {
         val q = query.trim()
-        val results = ArrayList<FileNode>(minOf(limit, 512))
+        // Collect the whole matching set before capping so the cap can prefer
+        // prefix matches: cutting at `limit` mid-iteration (arbitrary hash
+        // order) used to crowd prefix hits out of the visible results on
+        // large indexes. The scan itself stays allocation-free.
+        val prefixed = ArrayList<FileNode>()
+        val contained = ArrayList<FileNode>()
         for (node in map.values) {
-            if (results.size >= limit) break
             if (node.isDir) continue
             if (category != null && node.category != category) continue
             if (q.isNotEmpty() && !node.name.contains(q, ignoreCase = true)) continue
             if (sizeBand != null && !SearchFilters.matchesSize(node.size, sizeBand)) continue
             if (dateRange != null && !SearchFilters.matchesDate(node.lastModified, dateRange)) continue
             if (extFilter != null && !SearchFilters.matchesExtension(node.name, extFilter)) continue
-            results.add(node)
+            if (q.isNotEmpty() && node.name.startsWith(q, ignoreCase = true)) prefixed.add(node) else contained.add(node)
         }
-        // Best-effort relevance: exact prefix matches first.
-        if (q.isNotEmpty()) {
-            results.sortBy { if (it.name.startsWith(q, ignoreCase = true)) 0 else 1 }
-        }
-        return results
+        prefixed.addAll(contained)
+        return if (prefixed.size > limit) prefixed.subList(0, limit).toList() else prefixed
     }
 
     fun countByCategory(): Map<Category, Int> {

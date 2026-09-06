@@ -199,4 +199,5 @@ fun helpTips(screen: Screen): HelpTips? = when (screen) {
             "La cabecera muestra los primeros bytes del archivo.",
         ),
     )
+    is Screen.Diagnostics -> null
 }

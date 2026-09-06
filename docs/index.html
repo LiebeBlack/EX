@@ -26,12 +26,12 @@
     <h1>APEX File&nbsp;Manager</h1>
     <p class="lede">Gestor de archivos para Android. Interfaz OLED oscura, rendimiento de lista
       perezosa, herramientas de limpieza 100&nbsp;% algorítmicas y visores integrados.
-      Cero red. Cero servicios en segundo plano. Cien por cien local.</p>
+      Sin red. Sin servidor ni telemetría. Cien por cien local. Opcional: búsqueda semántica y OCR 100% en el dispositivo, desactivado por defecto.</p>
     <ul class="facts" aria-label="Hechos clave">
       <li>Kotlin&nbsp;2.1.20 + Jetpack&nbsp;Compose</li>
       <li>minSdk&nbsp;26 · targetSdk&nbsp;35</li>
       <li>Sin permiso INTERNET</li>
-      <li>Sin IA · sin Firebase · sin trackers</li>
+      <li>Sin red · sin servidor ni telemetría</li>
     </ul>
   </section>
 
@@ -62,8 +62,7 @@
         puede realizar llamadas de red, ni enviar telemetría ni cargar contenido remoto.</li>
       <li><strong>Sin segundo plano.</strong> No hay servicios, ni <code>WorkManager</code>, ni
         receptores: el consumo de batería en reposo es nulo.</li>
-      <li><strong>Sin dependencias de análisis.</strong> Sin Firebase, ML&nbsp;Kit ni modelos;
-        categorización, hashing y limpieza se implementan con algoritmos propios.</li>
+      <li><strong>Sin red ni telemetría.</strong> Sin permiso <code>INTERNET</code>, sin servidor y sin envío de datos externos; todo se ejecuta sobre el almacenamiento local.</li>
     </ul>
   </section>
 
@@ -171,17 +170,18 @@
     <table class="spec" id="tech-table">
       <thead><tr><th>Capa</th><th>Componente</th><th>Versión</th></tr></thead>
       <tbody>
-        <tr><td>Lenguaje</td><td>Kotlin</td><td>2.0.21</td></tr>
-        <tr><td>Compilación</td><td>Android Gradle Plugin</td><td>8.7.3</td></tr>
+        <tr><td>Lenguaje</td><td>Kotlin</td><td>2.1.20</td></tr>
+        <tr><td>Compilación</td><td>Android Gradle Plugin</td><td>8.8.2</td></tr>
         <tr><td>Build</td><td>Gradle (wrapper oficial)</td><td>8.10.2</td></tr>
         <tr><td>Plataforma</td><td>Android SDK</td><td>minSdk 26 · target 35 · JDK 17</td></tr>
-        <tr><td>UI</td><td>Jetpack Compose — BOM</td><td>2024.10.01</td></tr>
+        <tr><td>UI</td><td>Jetpack Compose — BOM</td><td>2024.12.01</td></tr>
         <tr><td>UI</td><td>Material&nbsp;3 · iconos extendidos</td><td>BOM</td></tr>
-        <tr><td>Núcleo</td><td>androidx.core-ktx</td><td>1.15.0</td></tr>
-        <tr><td>Núcleo</td><td>activity-compose</td><td>1.9.3</td></tr>
-        <tr><td>Ciclo de vida</td><td>lifecycle-runtime · viewmodel · compose</td><td>2.8.7</td></tr>
+        <tr><td>Núcleo</td><td>androidx.core-ktx</td><td>1.16.0</td></tr>
+        <tr><td>Núcleo</td><td>activity-compose</td><td>1.10.1</td></tr>
+        <tr><td>Ciclo de vida</td><td>lifecycle-runtime · viewmodel · compose</td><td>2.9.0</td></tr>
         <tr><td>Imágenes</td><td>Coil</td><td>2.7.0</td></tr>
         <tr><td>Almacenamiento</td><td>androidx.documentfile</td><td>1.0.1</td></tr>
+        <tr><td>Contenido (opcional)</td><td>ML Kit text-recognition (latino) · pdfbox-android</td><td>16.0.1 · 2.0.27.0</td></tr>
         <tr><td>Tests</td><td>JUnit 4</td><td>4.13.2</td></tr>
       </tbody>
     </table>
@@ -266,6 +266,7 @@
       </div>
       <div class="output">
         <code id="artifact-url" class="wrap">https://github.com/LiebeBlack/EX/releases/latest</code>
+        <p class="note">El repositorio público es <code>LiebeBlack/EX</code>; el nombre de la aplicación y del paquete es <strong>APEX File Manager</strong> (<code>com.apex.files</code>).</p>
         <button class="quiet copy" type="button" data-copy="#artifact-url">Copiar URL</button>
       </div>
     </div>

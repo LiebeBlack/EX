@@ -3,6 +3,7 @@ package com.apex.files.ui.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
+import com.apex.files.core.PerfMetrics
 import com.apex.files.data.fs.SearchFilters
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.search.SemanticSearch
@@ -29,6 +30,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val searching: Boolean = false,
         val indexed: Int = 0,
         val semantic: Boolean = false,
+        /** Entries in the optional content index (visible when semantic). */
+        val contentIndexed: Int = 0,
     )
 
     private val _state = MutableStateFlow(UiState(indexed = container.index.size))
@@ -44,6 +47,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             }
         }
         val semantic = container.settings.semanticSearchEnabled.value
+        // Cold start: the very first search must not wait for any I/O. The UI
+        // opens on whatever the in-memory index already holds (usually the
+        // snapshot Home restored); the persisted snapshot and the optional
+        // content index are reloaded afterwards, without blocking interaction.
+        _state.update { it.copy(indexed = container.index.size, semantic = semantic) }
+        viewModelScope.launch { performSearch() }
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 // Make sure the index is usable: restore the persisted snapshot or,
@@ -59,8 +68,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 if (semantic) container.contentIndex.load()
             }
-            _state.update { it.copy(indexed = container.index.size, semantic = semantic) }
-            performSearch()
+            _state.update {
+                it.copy(
+                    indexed = container.index.size,
+                    semantic = semantic,
+                    contentIndexed = container.contentIndex.size,
+                )
+            }
+            // Surface the fuller index without waiting for the user to type.
+            if (_state.value.results.isEmpty() && _state.value.query.isBlank()) performSearch()
         }
     }
 
@@ -127,26 +143,39 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 else -> "*.$w"
             }
         }
-        val results = if (s.semantic) {
-            SemanticSearch.search(
-                index = container.index,
-                textOf = container.contentIndex::textOf,
-                query = s.query,
-                sizeBand = s.sizeBand,
-                dateRange = s.dateRange,
-                extFilter = wildcard,
-                smartGroup = s.smartGroup,
-                limit = 400,
-            )
-        } else {
-            container.index.search(
-                query = s.query,
-                sizeBand = s.sizeBand,
-                dateRange = s.dateRange,
-                extFilter = wildcard,
-                limit = 400,
+        // The scan iterates the whole index: keep it off the main thread and
+        // report its cost so regressions show up in the perf log.
+        val results = withContext(Dispatchers.IO) {
+            PerfMetrics.timeSuspend("search.scan", detail = if (s.semantic) "semantic" else "name") {
+                if (s.semantic) {
+                    SemanticSearch.search(
+                        index = container.index,
+                        textOf = container.contentIndex::textOf,
+                        query = s.query,
+                        sizeBand = s.sizeBand,
+                        dateRange = s.dateRange,
+                        extFilter = wildcard,
+                        smartGroup = s.smartGroup,
+                        limit = 400,
+                    )
+                } else {
+                    container.index.search(
+                        query = s.query,
+                        sizeBand = s.sizeBand,
+                        dateRange = s.dateRange,
+                        extFilter = wildcard,
+                        limit = 400,
+                    )
+                }
+            }
+        }
+        _state.update {
+            it.copy(
+                results = results,
+                searching = false,
+                indexed = container.index.size,
+                contentIndexed = container.contentIndex.size,
             )
         }
-        _state.update { it.copy(results = results, searching = false, indexed = container.index.size) }
     }
 }

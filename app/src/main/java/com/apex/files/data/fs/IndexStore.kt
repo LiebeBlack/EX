@@ -1,6 +1,7 @@
 package com.apex.files.data.fs
 
 import android.content.Context
+import com.apex.files.core.PerfMetrics
 import com.apex.files.data.model.FileNode
 import java.io.BufferedReader
 import java.io.File
@@ -40,6 +41,11 @@ class IndexStore(context: Context) {
     /** Returns cached entries or null when missing / corrupt / empty. Blocking: call on [Dispatchers.IO]. */
     fun load(): List<FileNode>? {
         if (!file.exists()) return null
+        return PerfMetrics.time("index.load", countOf = { it?.size ?: 0 }) { loadEntries() }
+    }
+
+    private fun loadEntries(): List<FileNode>? {
+        if (!file.exists()) return null
         val out = ArrayList<FileNode>(4096)
         return try {
             BufferedReader(FileReader(file)).use { reader ->
@@ -77,6 +83,10 @@ class IndexStore(context: Context) {
 
     /** Atomically replaces the snapshot. Blocking: call on [Dispatchers.IO]. */
     fun save(nodes: Collection<FileNode>) {
+        PerfMetrics.time("index.save", countOf = { nodes.size }) { saveEntries(nodes) }
+    }
+
+    private fun saveEntries(nodes: Collection<FileNode>) {
         try {
             val tmp = File(file.parentFile, file.name + ".tmp")
             tmp.bufferedWriter(Charsets.UTF_8).use { w ->

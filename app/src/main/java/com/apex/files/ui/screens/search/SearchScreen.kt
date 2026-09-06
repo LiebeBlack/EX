@@ -107,7 +107,10 @@ fun SearchScreen() {
             }
             item {
                 Text(
-                    "${state.results.size} resultados · índice ${state.indexed} archivos",
+                    buildString {
+                        append("${state.results.size} resultados · índice ${state.indexed} archivos")
+                        if (state.semantic) append(" · contenido ${state.contentIndexed}")
+                    },
                     style = MonoTextStyleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
@@ -118,7 +121,7 @@ fun SearchScreen() {
                     EmptyState(Icons.Outlined.FolderOpen, "Sin resultados")
                 }
             } else {
-                items(state.results, key = { it.path }) { node ->
+                items(state.results, key = { it.path }, contentType = { it.category }) { node ->
                     SearchResultRow(node) {
                         NodeOpener.open(node, container, navigator, context, imageContext = state.results) { msg ->
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -301,6 +304,12 @@ private fun FilterChip(label: String, active: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun SearchResultRow(node: FileNode, onClick: () -> Unit) {
+    // Rows recompose on every keystroke's result list; precompute the derived
+    // strings so only the parts that truly changed cost any work.
+    val subtitle = remember(node.size, node.lastModified) {
+        "${SizeFormatter.format(node.size)} · ${DateFormatter.format(node.lastModified)}"
+    }
+    val parentPath = remember(node.path) { node.path.substringBeforeLast('/').ifBlank { "/" } }
     Row(
         Modifier
             .fillMaxWidth()
@@ -333,13 +342,13 @@ private fun SearchResultRow(node: FileNode, onClick: () -> Unit) {
                 maxLines = 1,
             )
             Text(
-                "${SizeFormatter.format(node.size)} · ${DateFormatter.format(node.lastModified)}",
+                subtitle,
                 style = MonoTextStyleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
             Text(
-                node.path.substringBeforeLast('/').ifBlank { "/" },
+                parentPath,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

@@ -7,6 +7,7 @@ import android.os.SystemClock
 import androidx.core.content.FileProvider
 import com.apex.files.core.OpProgress
 import com.apex.files.core.OpType
+import com.apex.files.core.PerfMetrics
 import com.apex.files.core.SpeedTracker
 import com.apex.files.data.model.Category
 import com.apex.files.data.model.FileNode
@@ -73,6 +74,19 @@ class FsRepository(private val context: Context) {
         showHidden: Boolean,
         sort: SortOrder,
         direction: SortDirection = SortDirection.ASC,
+    ): List<FileNode> = PerfMetrics.timeSuspend(
+        tag = "fs.list",
+        detail = if (dir.uri != null) "saf:${dir.name}" else dir.name,
+        countOf = { it.size },
+    ) {
+        withContext(Dispatchers.IO) { listEntries(dir, showHidden, sort, direction) }
+    }
+
+    private suspend fun listEntries(
+        dir: FileNode,
+        showHidden: Boolean,
+        sort: SortOrder,
+        direction: SortDirection,
     ): List<FileNode> = withContext(Dispatchers.IO) {
         if (dir.uri != null) return@withContext saf.list(dir, showHidden, sort, direction)
         val file = File(dir.path)
@@ -80,30 +94,38 @@ class FsRepository(private val context: Context) {
         val out = ArrayList<FileNode>(children.size)
         for (child in children) {
             if (Paths.isExcluded(child)) continue
-            if (!showHidden && (child.name.startsWith(".") || hasNomedia(child))) continue
-            out.add(child.toNode())
+            // One isDirectory() stat per child, reused: the previous shape
+            // called isDirectory up to three times per entry (hasNomedia +
+            // toNode) and length() even for directories — noticeable on
+            // folders with thousands of entries.
+            val isDir = child.isDirectory
+            if (!showHidden) {
+                if (child.name.startsWith(".")) continue
+                if (isDir && File(child, ".nomedia").exists()) continue
+            }
+            out.add(if (isDir) child.toDirectoryNode() else child.toFileNode())
         }
         out.sortedWith(Sorters.comparator(sort, direction))
     }
 
-    private fun hasNomedia(dir: File): Boolean =
-        dir.isDirectory && File(dir, ".nomedia").exists()
+    private fun File.toDirectoryNode(): FileNode =
+        FileNode.forDirectory(name, absolutePath, lastModified())
 
-    private fun File.toNode(): FileNode {
-        return if (isDirectory) {
-            FileNode.forDirectory(name, absolutePath, lastModified())
-        } else {
-            FileNode(
-                name = name,
-                path = absolutePath,
-                isDir = false,
-                size = length(),
-                lastModified = lastModified(),
-                extension = CategoryEngine.extensionOf(name),
-                category = CategoryEngine.classify(name),
-            )
-        }
+    private fun File.toFileNode(): FileNode {
+        return FileNode(
+            name = name,
+            path = absolutePath,
+            isDir = false,
+            size = length(),
+            lastModified = lastModified(),
+            extension = CategoryEngine.extensionOf(name),
+            category = CategoryEngine.classify(name),
+        )
     }
+
+    /** General variant for call sites that don't know the kind in advance. */
+    private fun File.toNode(): FileNode =
+        if (isDirectory) toDirectoryNode() else toFileNode()
 
     // ------------------------------------------------------------ deletion
 

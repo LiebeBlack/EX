@@ -113,7 +113,7 @@ fun PermissionScreen(
                 }
             }
             Text(
-                "Cero dependencias · Cero red · 100% local",
+                "Sin red · Sin servidor ni telemetría · 100% local",
                 style = MaterialTheme.typography.labelSmall,
                 color = ApexTextMuted,
                 modifier = Modifier.fillMaxWidth(),

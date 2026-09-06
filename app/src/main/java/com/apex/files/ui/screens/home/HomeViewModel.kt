@@ -3,6 +3,7 @@ package com.apex.files.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
+import com.apex.files.core.PerfMetrics
 import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.model.Category
 import com.apex.files.data.search.ContentIndexer
@@ -95,24 +96,26 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             val result: Pair<Map<Category, Int>, List<FileNode>> = runCatching {
                 withContext(Dispatchers.IO) {
                     ensureIndexLoaded(force)
-                    val counts = HashMap<Category, Int>()
-                    // Media categories come from MediaStore (same source as the
-                    // category screens); docs/archives come from the search
-                    // index. Never merge both for the same category — that
-                    // double-counts.
-                    counts[Category.IMAGE] = container.mediaStore.count(Category.IMAGE)
-                    counts[Category.VIDEO] = container.mediaStore.count(Category.VIDEO)
-                    counts[Category.AUDIO] = container.mediaStore.count(Category.AUDIO)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        counts[Category.DOWNLOADS] = container.mediaStore.count(Category.DOWNLOADS)
-                    }
-                    container.index.countByCategory().forEach { (cat, n) ->
-                        if (cat == Category.DOCUMENT || cat == Category.ARCHIVE) {
-                            counts.merge(cat, n, Int::plus)
+                    PerfMetrics.time("home.counts") {
+                        val counts = HashMap<Category, Int>()
+                        // Media categories come from MediaStore (same source as the
+                        // category screens); docs/archives come from the search
+                        // index. Never merge both for the same category — that
+                        // double-counts.
+                        counts[Category.IMAGE] = container.mediaStore.count(Category.IMAGE)
+                        counts[Category.VIDEO] = container.mediaStore.count(Category.VIDEO)
+                        counts[Category.AUDIO] = container.mediaStore.count(Category.AUDIO)
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            counts[Category.DOWNLOADS] = container.mediaStore.count(Category.DOWNLOADS)
                         }
+                        container.index.countByCategory().forEach { (cat, n) ->
+                            if (cat == Category.DOCUMENT || cat == Category.ARCHIVE) {
+                                counts.merge(cat, n, Int::plus)
+                            }
+                        }
+                        // Top-3 largest files as instant “limpieza” suggestions.
+                        counts to container.index.largestFiles(3, minBytes = 0L)
                     }
-                    // Top-3 largest files as instant “limpieza” suggestions.
-                    counts to container.index.largestFiles(3, minBytes = 0L)
                 }
             }.getOrElse { emptyMap<Category, Int>() to emptyList() }
             _state.update {
@@ -132,18 +135,20 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         withContext(Dispatchers.IO) {
             val cached = container.indexStore.load()
             when {
-                force || cached == null -> {
-                    container.index.rebuild(showHidden)
-                    container.indexStore.save(container.index.allFiles())
-                }
+                force || cached == null -> rebuildAndPersist(showHidden, if (force) "forced" else "cold")
                 container.index.size == 0 -> container.index.restore(cached)
                 System.currentTimeMillis() - container.indexStore.lastSavedAtMillis() >
-                    IndexStore.AUTO_REINDEX_AFTER_MS -> {
-                    container.index.rebuild(showHidden)
-                    container.indexStore.save(container.index.allFiles())
-                }
+                    IndexStore.AUTO_REINDEX_AFTER_MS -> rebuildAndPersist(showHidden, "stale")
                 else -> Unit
             }
         }
+    }
+
+    /** Full re-walk + snapshot persist, reported to [PerfMetrics]. */
+    private suspend fun rebuildAndPersist(showHidden: Boolean, reason: String) {
+        PerfMetrics.timeSuspend("index.rebuild", detail = reason) {
+            container.index.rebuild(showHidden)
+        }
+        container.indexStore.save(container.index.allFiles())
     }
 }

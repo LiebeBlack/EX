@@ -85,9 +85,17 @@ fun PropertiesSheet(
             HorizontalDivider(color = ApexBorder, thickness = 1.dp)
 
             PropertyRow("Ruta", node.path)
-            PropertyRow("Tamaño", if (state.computingSize) "Calculando…" else SizeFormatter.format(state.size ?: 0L))
-            if (state.count != null && node.isDir) {
-                PropertyRow("Contenido", "${state.count.files} archivos · ${state.count.dirs} carpetas")
+            if (node.isDir) {
+                // Size is a full recursive walk: say so while it runs instead of
+                // showing a spinner the user can't interpret.
+                PropertyRow("Tamaño", if (state.computingSize) "Recorriendo la carpeta…" else SizeFormatter.format(state.size ?: 0L))
+                PropertyRow("Contenido", when {
+                    state.computingSize -> "…"
+                    state.count != null -> "${state.count.files} archivos · ${state.count.dirs} carpetas"
+                    else -> "—"
+                })
+            } else {
+                PropertyRow("Tamaño", SizeFormatter.format(state.size ?: 0L))
             }
             PropertyRow("Modificado", DateFormatter.format(node.lastModified))
 
