@@ -95,6 +95,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import com.apex.files.Screen
 import com.apex.files.core.ListDensity
 import com.apex.files.core.OpProgress

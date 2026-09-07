@@ -1114,6 +1114,7 @@ class FsRepository(private val context: Context) {
         val input2 = openInputStream(node2) ?: return@withContext false
         
         try {
+            var identical = false
             input1.use { in1 ->
                 input2.use { in2 ->
                     val buffer1 = ByteArray(8192)
@@ -1121,14 +1122,23 @@ class FsRepository(private val context: Context) {
                     while (true) {
                         val read1 = in1.read(buffer1)
                         val read2 = in2.read(buffer2)
-                        if (read1 != read2) return@withContext false
-                        if (read1 == -1) return@withContext true
-                        for (i in 0 until read1) {
-                            if (buffer1[i] != buffer2[i]) return@withContext false
+                        if (read1 != read2) break
+                        if (read1 == -1) {
+                            identical = true
+                            break
                         }
+                        var differs = false
+                        for (i in 0 until read1) {
+                            if (buffer1[i] != buffer2[i]) {
+                                differs = true
+                                break
+                            }
+                        }
+                        if (differs) break
                     }
                 }
             }
+            identical
         } catch (e: Exception) {
             false
         }

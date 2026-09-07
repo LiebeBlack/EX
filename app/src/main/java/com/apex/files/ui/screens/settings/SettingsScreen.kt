@@ -31,7 +31,7 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Overlay
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.SettingsBackupRestore
@@ -249,7 +249,7 @@ fun SettingsScreen() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Row(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = { if (fontSize > 10) vm.setFontSize(fontSize - 1) }) {
                                 Text("-", color = MaterialTheme.colorScheme.primary)
                             }
@@ -327,7 +327,7 @@ fun SettingsScreen() {
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Overlay, null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text("Confirmar sobrescritura", style = MaterialTheme.typography.titleMedium)

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apex.files.core.AppContainer
 import com.apex.files.data.fs.CategoryEngine
-import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.Category
 import kotlinx.coroutines.Dispatchers
@@ -97,7 +96,7 @@ class StatsViewModel(
                 val category = CategoryEngine.classify(f.name)
                 categoryCount[category] = (categoryCount[category] ?: 0) + 1
                 
-                val ext = FileKinds.extensionOf(f.name).lowercase()
+                val ext = CategoryEngine.extensionOf(f.name)
                 if (ext.isNotEmpty()) {
                     extensionCount[ext] = (extensionCount[ext] ?: 0) + 1
                 }
