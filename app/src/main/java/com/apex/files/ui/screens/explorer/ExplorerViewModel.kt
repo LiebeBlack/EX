@@ -14,6 +14,7 @@ import com.apex.files.data.fs.CountResult
 import com.apex.files.data.fs.FileKinds
 import com.apex.files.data.fs.OpResult
 import com.apex.files.data.fs.SearchFilters
+import com.apex.files.data.fs.SizeFormatter
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.Location
 import com.apex.files.data.model.SortDirection
@@ -575,13 +576,13 @@ class ExplorerViewModel(
 
     /** Batch operation: create backups for all selected files. */
     suspend fun batchBackup(nodes: List<FileNode>): OpResult {
-        val acc = OpResult()
+        var acc = OpResult()
         for (node in nodes) {
             val backup = createBackup(node)
             if (backup != null) {
-                acc.filesDone++
+                acc = acc.copy(filesDone = acc.filesDone + 1)
             } else {
-                acc.errors++
+                acc = acc.copy(errors = acc.errors + 1)
             }
         }
         return acc
@@ -625,13 +626,13 @@ class ExplorerViewModel(
         val sources = selectedNodes()
         if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
         
-        val acc = OpResult()
+        var acc = OpResult()
         for (source in sources) {
             val success = container.fs.changePermissions(source, permissions)
             if (success) {
-                acc.filesDone++
+                acc = acc.copy(filesDone = acc.filesDone + 1)
             } else {
-                acc.errors++
+                acc = acc.copy(errors = acc.errors + 1)
             }
         }
         return acc
@@ -643,14 +644,14 @@ class ExplorerViewModel(
         if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
         
         val now = System.currentTimeMillis()
-        val acc = OpResult()
+        var acc = OpResult()
         
         for (source in sources) {
             val success = container.fs.setLastModified(source, now)
             if (success) {
-                acc.filesDone++
+                acc = acc.copy(filesDone = acc.filesDone + 1)
             } else {
-                acc.errors++
+                acc = acc.copy(errors = acc.errors + 1)
             }
         }
         return acc
@@ -673,14 +674,14 @@ class ExplorerViewModel(
         val sources = selectedNodes()
         if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
         
-        val acc = OpResult()
+        var acc = OpResult()
         for (source in sources) {
             val linkName = "link_${source.name}"
             val created = container.fs.createSymlink(source, linkName, destDir)
             if (created != null) {
-                acc.filesDone++
+                acc = acc.copy(filesDone = acc.filesDone + 1)
             } else {
-                acc.errors++
+                acc = acc.copy(errors = acc.errors + 1)
             }
         }
         return acc

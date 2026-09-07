@@ -7,10 +7,14 @@ import com.apex.files.data.model.SortOrder
 import com.apex.files.data.model.ViewMode
 import com.apex.files.ui.screens.home.HomeConfig
 import com.apex.files.ui.screens.home.HomeSection
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 
 /** Accent presets selectable in Settings, plus a user-defined color. */
 enum class Accent(val hex: Long) {
@@ -52,6 +56,7 @@ class SettingsRepository(
 ) {
 
     private val prefs: SharedPreferences = encryptedPrefs
+    private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
     private val _accent = MutableStateFlow(
         Accent.fromName(prefs.getString(KEY_ACCENT, null))
@@ -167,7 +172,11 @@ class SettingsRepository(
     val homeConfig: StateFlow<HomeConfig> = 
         kotlinx.coroutines.flow.combine(_homeSectionOrder, _homeSectionVisibility) { order, visibility ->
             HomeConfig.fromString(order, visibility)
-        }.asStateFlow()
+        }.stateIn(
+            scope = coroutineScope,
+            started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+            initialValue = HomeConfig.fromString(_homeSectionOrder.value, _homeSectionVisibility.value)
+        )
 
     /** Whether to show each home section (legacy boolean properties for compatibility). */
     private val _showStorageHero = MutableStateFlow(prefs.getBoolean(KEY_SHOW_STORAGE_HERO, true))

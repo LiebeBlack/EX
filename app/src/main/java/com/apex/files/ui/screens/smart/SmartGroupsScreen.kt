@@ -2,6 +2,7 @@ package com.apex.files.ui.screens.smart
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ import com.apex.files.ui.LocalOperationCenter
 import com.apex.files.ui.NodeOpener
 import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
+import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.components.ConfirmDialog
 import com.apex.files.ui.components.EmptyState
@@ -81,6 +83,8 @@ fun SmartGroupsScreen() {
     val state by vm.state.collectAsStateWithLifecycle()
     var moveGroup by remember { mutableStateOf<SmartGroup?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    
+    val toast: (String) -> Unit = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
     var newGroupName by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize()) {
@@ -91,7 +95,7 @@ fun SmartGroupsScreen() {
             },
             actions = {
                 if (state.openGroup == null) {
-                    androidx.compose.material.icons.Icons.Outlined.Add.let { icon ->
+                    Icons.Outlined.Add.let { icon ->
                         ApexIconButton(icon, "Crear grupo personalizado") {
                             showCreateDialog = true
                         }
@@ -160,9 +164,9 @@ fun SmartGroupsScreen() {
                                 )
                             }
                             TextButton(onClick = { 
-                                val info = state.groups.firstOrNull { it.group == info }
-                                if (info != null) {
-                                    toast("Grupo: ${info.group.label} - ${info.nodes.size} archivos")
+                                val groupInfo = state.groups.firstOrNull { it.group == info.group }
+                                if (groupInfo != null) {
+                                    toast("Grupo: ${groupInfo.group.label} - ${groupInfo.nodes.size} archivos")
                                 }
                             }) {
                                 Text(

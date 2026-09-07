@@ -3,6 +3,7 @@ package com.apex.files.ui.screens.explorer
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -57,9 +58,8 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SortByAlpha
-import androidx.compose.material.icons.outlined.SortBySize
-import androidx.compose.material.icons.outlined.Split
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Unarchive
@@ -366,7 +366,7 @@ fun ExplorerScreen(location: Location) {
                             text = { Text("Crear copia de seguridad", style = MaterialTheme.typography.bodyMedium) },
                             onClick = {
                                 addMenuOpen = false
-                                viewModelScope.launch {
+                                vm.viewModelScope.launch {
                                     val selected = vm.selectedNodes()
                                     if (selected.isNotEmpty()) {
                                         val result = vm.batchBackup(selected)
@@ -399,7 +399,7 @@ fun ExplorerScreen(location: Location) {
                                 advancedMenuOpen = false
                                 showSplitDialog = true
                             },
-                            leadingIcon = { Icon(Icons.Outlined.Split, null) }
+                            leadingIcon = { Icon(Icons.Outlined.CallSplit, null) }
                         )
                         DropdownMenuItem(
                             text = { Text("Comparar archivos", style = MaterialTheme.typography.bodyMedium) },
@@ -429,7 +429,7 @@ fun ExplorerScreen(location: Location) {
                             text = { Text("Actualizar timestamp", style = MaterialTheme.typography.bodyMedium) },
                             onClick = {
                                 advancedMenuOpen = false
-                                viewModelScope.launch {
+                                vm.viewModelScope.launch {
                                     val result = vm.touchFiles()
                                     toast(if (result.errors == 0) "Timestamps actualizados" else "Error al actualizar timestamps")
                                 }
@@ -714,8 +714,9 @@ fun ExplorerScreen(location: Location) {
             title = "Fusionar archivos de texto",
             placeholder = "nombre_fusionado.txt",
             onConfirm = { name ->
-                viewModelScope.launch {
-                    val result = vm.mergeTextFiles(name)
+                vm.viewModelScope.launch {
+                    val selected = vm.selectedNodes()
+                    val result = vm.mergeTextFiles(selected, name)
                     toast(if (result.errors == 0) "Archivos fusionados" else "Error al fusionar")
                     vm.refresh()
                 }
@@ -730,7 +731,7 @@ fun ExplorerScreen(location: Location) {
             placeholder = "100",
             onConfirm = { linesStr ->
                 val lines = linesStr.toIntOrNull() ?: 100
-                viewModelScope.launch {
+                vm.viewModelScope.launch {
                     val selected = vm.selectedNodes().firstOrNull()
                     if (selected != null) {
                         val parts = vm.splitTextFile(selected, lines)
@@ -746,7 +747,7 @@ fun ExplorerScreen(location: Location) {
     if (showCompareDialog) {
         val selected = vm.selectedNodes()
         if (selected.size == 2) {
-            viewModelScope.launch {
+            vm.viewModelScope.launch {
                 val identical = vm.compareFiles(selected[0], selected[1])
                 toast(if (identical) "Los archivos son idénticos" else "Los archivos son diferentes")
             }
@@ -761,7 +762,7 @@ fun ExplorerScreen(location: Location) {
             placeholder = "755",
             onConfirm = { permStr ->
                 val permissions = permStr.toIntOrNull(8) ?: 644
-                viewModelScope.launch {
+                vm.viewModelScope.launch {
                     val result = vm.changePermissions(permissions)
                     toast(if (result.errors == 0) "Permisos cambiados" else "Error al cambiar permisos")
                     vm.refresh()
@@ -773,8 +774,8 @@ fun ExplorerScreen(location: Location) {
     }
     if (showSymlinkDialog) {
         toast("Los enlaces simbólicos se crearán en la carpeta actual")
-        viewModelScope.launch {
-            val result = vm.createSymlinks(_state.value.current ?: return@launch)
+        vm.viewModelScope.launch {
+            val result = vm.createSymlinks(state.current ?: return@launch)
             toast(if (result.errors == 0) "Enlaces creados" else "Error al crear enlaces")
             vm.refresh()
         }

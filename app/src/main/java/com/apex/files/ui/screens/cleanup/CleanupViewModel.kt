@@ -124,7 +124,7 @@ class CleanupViewModel(private val container: AppContainer) : ViewModel() {
 
     /** Group items by kind and show statistics */
     fun getStatistics(): Map<String, Int> {
-        return _state.value.items.groupBy { it.kind.name }.mapValues { it.size }
+        return _state.value.items.groupBy { it.kind.name }.mapValues { it.value.size }
     }
 
     /** Analyze disk space impact by directory */

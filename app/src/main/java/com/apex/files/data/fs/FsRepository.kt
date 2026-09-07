@@ -925,9 +925,14 @@ class FsRepository(private val context: Context) {
         val backupName = "${file.name}.bak"
         val backupFile = File(file.parentFile, backupName)
         
-        return@withContext if (file.copyTo(backupFile, overwrite = true)) {
+        return@withContext try {
+            file.inputStream().use { input ->
+                backupFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
             backupFile.toNode()
-        } else {
+        } catch (e: Exception) {
             null
         }
     }
@@ -945,9 +950,14 @@ class FsRepository(private val context: Context) {
         val backupName = "${base}_${timestamp}${ext}.bak"
         val backupFile = File(file.parentFile, backupName)
         
-        return@withContext if (file.copyTo(backupFile, overwrite = false)) {
+        return@withContext try {
+            file.inputStream().use { input ->
+                backupFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
             backupFile.toNode()
-        } else {
+        } catch (e: Exception) {
             null
         }
     }
@@ -986,39 +996,38 @@ class FsRepository(private val context: Context) {
         val results = mutableListOf<FileNode>()
         val input = openInputStream(source) ?: return@withContext results
         try {
-            input.use { input ->
-                val reader = input.bufferedReader(charset)
-                var fileCounter = 1
-                var lineCounter = 0
-                var currentContent = StringBuilder()
-                val baseName = source.name.substringBeforeLast('.')
-                val ext = source.name.substringAfterLast('.', "")
+            val lines = input.bufferedReader(charset).readLines()
+            val baseName = source.name.substringBeforeLast('.')
+            val ext = source.name.substringAfterLast('.', "")
+            
+            var fileCounter = 1
+            var lineCounter = 0
+            var currentContent = StringBuilder()
+            
+            for (line in lines) {
+                currentContent.append(line).append("\n")
+                lineCounter++
                 
-                reader.forEachLine { line ->
-                    currentContent.append(line).append("\n")
-                    lineCounter++
-                    
-                    if (lineCounter >= linesPerFile) {
-                        val newFileName = "${baseName}_part${fileCounter}.${ext}"
-                        val newNode = createFile(destDir, newFileName)
-                        if (newNode != null) {
-                            saveText(newNode, currentContent.toString(), charset)
-                            results.add(newNode)
-                        }
-                        currentContent.clear()
-                        lineCounter = 0
-                        fileCounter++
-                    }
-                }
-                
-                // Write remaining content
-                if (currentContent.isNotEmpty()) {
+                if (lineCounter >= linesPerFile) {
                     val newFileName = "${baseName}_part${fileCounter}.${ext}"
                     val newNode = createFile(destDir, newFileName)
                     if (newNode != null) {
                         saveText(newNode, currentContent.toString(), charset)
                         results.add(newNode)
                     }
+                    currentContent.clear()
+                    lineCounter = 0
+                    fileCounter++
+                }
+            }
+            
+            // Write remaining content
+            if (currentContent.isNotEmpty()) {
+                val newFileName = "${baseName}_part${fileCounter}.${ext}"
+                val newNode = createFile(destDir, newFileName)
+                if (newNode != null) {
+                    saveText(newNode, currentContent.toString(), charset)
+                    results.add(newNode)
                 }
             }
         } catch (e: Exception) {
@@ -1261,7 +1270,13 @@ class FsRepository(private val context: Context) {
     suspend fun setReadOnly(node: FileNode, readOnly: Boolean): Boolean = withContext(Dispatchers.IO) {
         if (node.uri != null) return@withContext false
         try {
-            File(node.path).setReadOnly(readOnly)
+            val file = File(node.path)
+            if (readOnly) {
+                file.setReadOnly()
+            } else {
+                file.setWritable(true)
+            }
+            true
         } catch (e: Exception) {
             false
         }
