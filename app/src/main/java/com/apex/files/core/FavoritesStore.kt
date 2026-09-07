@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.model.FileNode
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
 
 /** A user-starred folder or file. */
 data class Favorite(val node: FileNode)
@@ -25,10 +21,9 @@ data class Favorite(val node: FileNode)
  * for one-tap access. Stored as JSON in encrypted SharedPreferences;
  * folders keep their SAF uri when applicable so they stay navigable.
  */
-@Singleton
-class FavoritesStore @Inject constructor(
-    @ApplicationContext context: Context,
-    @Named("EncryptedFavorites") encryptedPrefs: SharedPreferences
+class FavoritesStore(
+    context: Context,
+    encryptedPrefs: SharedPreferences
 ) {
 
     private companion object {

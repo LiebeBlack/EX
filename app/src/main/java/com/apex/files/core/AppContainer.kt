@@ -22,14 +22,12 @@ import com.apex.files.tools.EmptyCleaner
 import com.apex.files.tools.JunkAnalyzer
 import com.apex.files.tools.SpaceAnalyzer
 import com.apex.files.tools.StorageBenchmark
-import javax.inject.Inject
 
 /**
- * Dependency container now managed by Hilt with proper lifecycle scoping.
- * All dependencies are injected via constructor injection to avoid memory leaks.
+ * Dependency container managed by Hilt with proper lifecycle scoping via AppModule.
  * Created once per process in [MainActivity] and exposed to composables via [LocalContainer].
  */
-class AppContainer @Inject constructor(
+class AppContainer(
     val appContext: Context,
     val settings: SettingsRepository,
     val conflicts: ConflictController,

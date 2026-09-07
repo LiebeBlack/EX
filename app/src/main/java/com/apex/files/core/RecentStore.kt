@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.model.FileNode
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
 
 /** A file opened recently, newest first. */
 data class RecentEntry(
@@ -28,10 +24,9 @@ data class RecentEntry(
  * optional SAF uri). Written to encrypted SharedPreferences via org.json
  * (part of the Android platform — no extra dependencies).
  */
-@Singleton
-class RecentStore @Inject constructor(
-    @ApplicationContext context: Context,
-    @Named("EncryptedRecents") encryptedPrefs: SharedPreferences
+class RecentStore(
+    context: Context,
+    encryptedPrefs: SharedPreferences
 ) {
 
     companion object {

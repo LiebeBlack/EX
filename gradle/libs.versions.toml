@@ -1,6 +1,7 @@
 [versions]
 agp = "8.8.2"
 kotlin = "2.1.20"
+ksp = "2.1.20-1.0.31"
 coreKtx = "1.16.0"
 activityCompose = "1.10.1"
 composeBom = "2024.12.01"
@@ -10,8 +11,9 @@ documentfile = "1.0.1"
 junit = "4.13.2"
 mlkitTextRecognition = "16.0.1"
 pdfboxAndroid = "2.0.27.0"
-hilt = "2.48"
+hilt = "2.51.1"
 security = "1.1.0-alpha06"
+media = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,10 +38,11 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.2.0" }
 androidx-security = { group = "androidx.security", name = "security-crypto", version.ref = "security" }
+androidx-media = { group = "androidx.media", name = "media", version.ref = "media" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-ksp = { id = "com.google.devtools.ksp", version = "2.0.21-1.0.28" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

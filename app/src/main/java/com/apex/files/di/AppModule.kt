@@ -1,23 +1,25 @@
 package com.apex.files.di
 
+import android.app.NotificationManager
 import android.content.Context
+import android.content.SharedPreferences
 import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.util.DebugLogger
 import com.apex.files.core.AppContainer
-import com.apex.files.core.ConflictController
 import com.apex.files.core.FavoritesStore
-import com.apex.files.core.IndexStore
-import com.apex.files.core.MemoryIndex
 import com.apex.files.core.OnboardingStore
 import com.apex.files.core.RecentStore
 import com.apex.files.core.SettingsRepository
-import com.apex.files.core.TrashManager
 import com.apex.files.data.fs.ArchiveRepository
+import com.apex.files.data.fs.ConflictController
 import com.apex.files.data.fs.FsRepository
+import com.apex.files.data.fs.IndexStore
+import com.apex.files.data.fs.MemoryIndex
 import com.apex.files.data.fs.Paths
 import com.apex.files.data.fs.SqliteRepository
+import com.apex.files.data.fs.TrashManager
 import com.apex.files.data.media.MediaStoreRepository
 import com.apex.files.data.search.ContentIndex
 import com.apex.files.data.search.ContentIndexer
@@ -37,11 +39,20 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.io.File
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideNotificationManager(
+        @ApplicationContext context: Context
+    ): NotificationManager {
+        return context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
 
     @Provides
     @Singleton

@@ -7,14 +7,10 @@ import com.apex.files.data.model.SortOrder
 import com.apex.files.data.model.ViewMode
 import com.apex.files.ui.screens.home.HomeConfig
 import com.apex.files.ui.screens.home.HomeSection
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
 
 /** Accent presets selectable in Settings, plus a user-defined color. */
 enum class Accent(val hex: Long) {
@@ -50,10 +46,9 @@ enum class ListDensity {
  * theme and the file browser react instantly. Zero extra dependencies.
  * Now uses EncryptedSharedPreferences for secure storage of sensitive data.
  */
-@Singleton
-class SettingsRepository @Inject constructor(
-    @ApplicationContext context: Context,
-    @Named("EncryptedSettings") encryptedPrefs: SharedPreferences
+class SettingsRepository(
+    context: Context,
+    encryptedPrefs: SharedPreferences
 ) {
 
     private val prefs: SharedPreferences = encryptedPrefs

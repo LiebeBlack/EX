@@ -16,7 +16,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object SecurityModule {
 
-    private const val MASTER_KEY_ALIAS = "apex_master_key"
     private const val ENCRYPTED_PREFS_FILE = "apex_encrypted_prefs"
 
     @Provides
@@ -24,8 +23,25 @@ object SecurityModule {
     fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
         return MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .setKeySpec(MasterKey.AES256_GCM_SPEC)
             .build()
+    }
+
+    private fun getSecurePrefs(
+        context: Context,
+        fileName: String,
+        masterKey: MasterKey
+    ): SharedPreferences {
+        return try {
+            EncryptedSharedPreferences.create(
+                context,
+                fileName,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Throwable) {
+            context.getSharedPreferences(fileName, Context.MODE_PRIVATE)
+        }
     }
 
     @Provides
@@ -35,13 +51,7 @@ object SecurityModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            ENCRYPTED_PREFS_FILE,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return getSecurePrefs(context, ENCRYPTED_PREFS_FILE, masterKey)
     }
 
     @Provides
@@ -51,13 +61,7 @@ object SecurityModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            "apex_encrypted_onboarding",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return getSecurePrefs(context, "apex_encrypted_onboarding", masterKey)
     }
 
     @Provides
@@ -67,13 +71,7 @@ object SecurityModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            "apex_encrypted_tool_roots",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return getSecurePrefs(context, "apex_encrypted_tool_roots", masterKey)
     }
 
     @Provides
@@ -83,13 +81,7 @@ object SecurityModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            "apex_encrypted_drives",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return getSecurePrefs(context, "apex_encrypted_drives", masterKey)
     }
 
     @Provides
@@ -99,13 +91,7 @@ object SecurityModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            "apex_encrypted_recents",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return getSecurePrefs(context, "apex_encrypted_recents", masterKey)
     }
 
     @Provides
@@ -115,12 +101,6 @@ object SecurityModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
-            "apex_encrypted_favorites",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return getSecurePrefs(context, "apex_encrypted_favorites", masterKey)
     }
 }

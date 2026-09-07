@@ -2,21 +2,15 @@ package com.apex.files.core
 
 import android.content.Context
 import android.content.SharedPreferences
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
-
 /**
  * First-run flags (welcome tour). Kept in their own preferences file so
  * resetting the app settings never touches them unless explicitly asked
  * (Settings → "Restablecer ajustes" resets both).
  * Now uses EncryptedSharedPreferences for secure storage.
  */
-@Singleton
-class OnboardingStore @Inject constructor(
-    @ApplicationContext context: Context,
-    @Named("EncryptedOnboarding") encryptedPrefs: SharedPreferences
+class OnboardingStore(
+    context: Context,
+    encryptedPrefs: SharedPreferences
 ) {
 
     private val prefs: SharedPreferences = encryptedPrefs

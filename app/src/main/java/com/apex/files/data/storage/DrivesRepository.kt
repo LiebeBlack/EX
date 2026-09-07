@@ -6,17 +6,12 @@ import android.content.SharedPreferences
 import android.net.Uri
 import com.apex.files.data.fs.Paths
 import com.apex.files.data.model.Location
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
 
 /** Browsable volumes: internal storage, removable SD, and USB-OTG SAF trees. */
-@Singleton
-class DrivesRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-    @Named("EncryptedDrives") encryptedPrefs: SharedPreferences
+class DrivesRepository(
+    private val context: Context,
+    encryptedPrefs: SharedPreferences
 ) {
 
     data class Volume(

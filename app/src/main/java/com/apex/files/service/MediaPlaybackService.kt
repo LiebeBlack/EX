@@ -50,6 +50,14 @@ class MediaPlaybackService : Service() {
     @Inject
     lateinit var notificationManager: NotificationManager
 
+    private fun getNotifier(): NotificationManager {
+        return if (::notificationManager.isInitialized) {
+            notificationManager
+        } else {
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        }
+    }
+
     private var isPlaying = false
 
     override fun onCreate() {
@@ -87,7 +95,7 @@ class MediaPlaybackService : Service() {
                 setSound(null, null)
                 enableVibration(false)
             }
-            notificationManager.createNotificationChannel(channel)
+            getNotifier().createNotificationChannel(channel)
         }
     }
 

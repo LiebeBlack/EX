@@ -13,3 +13,12 @@
 -keep class com.tom_roush.pdfbox.** { *; }
 -dontwarn com.tom_roush.pdfbox.**
 -dontwarn org.bouncycastle.**
+
+# Dagger / Hilt
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+
+# Security Crypto / Tink
+-dontwarn java.lang.management.**
+-dontwarn java.lang.ProcessHandle
+-dontwarn java.lang.ClassValue
