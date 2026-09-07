@@ -1307,7 +1307,7 @@ class FsRepository(private val context: Context) {
     }
 
     fun exists(node: FileNode): Boolean =
-        if (node.uri != null) saf.document(node)?.exists() ?: false else File(node.path).exists()
+        if (node.uri != null) saf.document(node) != null else File(node.path).exists()
 
     fun isDirEmpty(dir: FileNode): Boolean = when {
         dir.uri != null -> (saf.document(dir)?.listFiles()?.isEmpty() ?: true)
