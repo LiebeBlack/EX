@@ -1088,9 +1088,9 @@ class FsRepository(private val context: Context) {
         if (node.uri != null) return@withContext false
         return@withContext try {
             val file = File(node.path)
-            file.setExecutable((permissions and 0o111) != 0, false)
-            file.setReadable((permissions and 0o444) != 0, false)
-            file.setWritable((permissions and 0o222) != 0, false)
+            file.setExecutable((permissions and 0b001_001_001) != 0, false)
+            file.setReadable((permissions and 0b100_100_100) != 0, false)
+            file.setWritable((permissions and 0b010_010_010) != 0, false)
             true
         } catch (e: Exception) {
             false
@@ -1114,7 +1114,9 @@ class FsRepository(private val context: Context) {
                         val read2 = in2.read(buffer2)
                         if (read1 != read2) return@withContext false
                         if (read1 == -1) return@withContext true
-                        if (!buffer1.contentEquals(buffer2)) return@withContext false
+                        for (i in 0 until read1) {
+                            if (buffer1[i] != buffer2[i]) return@withContext false
+                        }
                     }
                 }
             }
@@ -1214,15 +1216,6 @@ class FsRepository(private val context: Context) {
             true
         } catch (e: Exception) {
             false
-        }
-    }
-
-    /** Checks if a file/directory exists at the given path. */
-    fun exists(node: FileNode): Boolean {
-        return if (node.uri != null) {
-            saf.document(node) != null
-        } else {
-            File(node.path).exists()
         }
     }
 
