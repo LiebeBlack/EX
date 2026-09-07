@@ -186,6 +186,227 @@ class TextViewerViewModel(
         _state.update { it.copy(wrap = !it.wrap) }
     }
 
+    // -------------------------------------------------------------- advanced editing
+
+    /** Appends text to the end of the file (when editing large files). */
+    fun appendText(text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val s = _state.value
+            val ok = container.fs.appendText(node, text, charsetFor(s.encoding))
+            _state.update {
+                it.copy(notice = if (ok) "Texto añadido" else "Error al añadir texto")
+            }
+            if (ok) loadInitial()
+        }
+    }
+
+    /** Replaces all occurrences of a string in the whole file. */
+    fun replaceAll(search: String, replacement: String) {
+        val s = _state.value
+        if (!s.editing || s.saving) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = readWholeText()
+            if (content == null) {
+                _state.update { it.copy(notice = "No se pudo leer el archivo") }
+                return@launch
+            }
+            
+            val newContent = content.replace(search, replacement)
+            val replacedCount = content.split(search).size - 1
+            
+            _state.update { 
+                it.copy(
+                    draft = newContent,
+                    notice = "Reemplazadas $replacedCount ocurrencias"
+                )
+            }
+        }
+    }
+
+    /** Converts line endings (CRLF ↔ LF). */
+    fun convertLineEndings(toCrlf: Boolean) {
+        val s = _state.value
+        if (!s.editing || s.saving) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = readWholeText()
+            if (content == null) {
+                _state.update { it.copy(notice = "No se pudo leer el archivo") }
+                return@launch
+            }
+            
+            val newContent = if (toCrlf) {
+                content.replace("\r\n", "\n").replace("\n", "\r\n")
+            } else {
+                content.replace("\r\n", "\n").replace("\r", "\n")
+            }
+            
+            _state.update { 
+                it.copy(
+                    draft = newContent,
+                    notice = "Finales de línea convertidos"
+                )
+            }
+        }
+    }
+
+    /** Removes trailing whitespace from all lines. */
+    fun trimTrailingWhitespace() {
+        val s = _state.value
+        if (!s.editing || s.saving) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = readWholeText()
+            if (content == null) {
+                _state.update { it.copy(notice = "No se pudo leer el archivo") }
+                return@launch
+            }
+            
+            val newContent = content.lines().joinToString("\n") { it.trimEnd() }
+            
+            _state.update { 
+                it.copy(
+                    draft = newContent,
+                    notice = "Espacios finales eliminados"
+                )
+            }
+        }
+    }
+
+    /** Sorts lines alphabetically. */
+    fun sortLines(ascending: Boolean = true) {
+        val s = _state.value
+        if (!s.editing || s.saving) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = readWholeText()
+            if (content == null) {
+                _state.update { it.copy(notice = "No se pudo leer el archivo") }
+                return@launch
+            }
+            
+            val lines = content.lines()
+            val sortedLines = if (ascending) lines.sorted() else lines.sortedDescending()
+            val newContent = sortedLines.joinToString("\n")
+            
+            _state.update { 
+                it.copy(
+                    draft = newContent,
+                    notice = "Líneas ordenadas"
+                )
+            }
+        }
+    }
+
+    /** Removes duplicate lines. */
+    fun removeDuplicateLines() {
+        val s = _state.value
+        if (!s.editing || s.saving) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = readWholeText()
+            if (content == null) {
+                _state.update { it.copy(notice = "No se pudo leer el archivo") }
+                return@launch
+            }
+            
+            val lines = content.lines()
+            val uniqueLines = lines.distinct()
+            val removedCount = lines.size - uniqueLines.size
+            val newContent = uniqueLines.joinToString("\n")
+            
+            _state.update { 
+                it.copy(
+                    draft = newContent,
+                    notice = "Eliminadas $removedCount líneas duplicadas"
+                )
+            }
+        }
+    }
+
+    /** Changes the encoding and reloads the file. */
+    fun changeEncoding(newEncoding: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update { it.copy(loading = true) }
+            try {
+                val total = open().use { countLines(it) }
+                val lines = open().use { readWindow(it, WINDOW) }
+                _state.update {
+                    it.copy(
+                        lines = lines,
+                        baseLine = 0,
+                        totalLines = total,
+                        encoding = newEncoding,
+                        truncated = lines.size < total,
+                        loading = false,
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message ?: "Error", loading = false) }
+            }
+        }
+    }
+
+    /** Gets file statistics (lines, characters, words). */
+    fun getFileStats(): Triple<Long, Long, Long> {
+        val s = _state.value
+        val totalLines = s.totalLines ?: 0
+        val totalChars = s.lines.sumOf { it.length }
+        val totalWords = s.lines.sumOf { it.split("\\s+".toRegex()).size }
+        return Triple(totalLines, totalChars.toLong(), totalWords.toLong())
+    }
+
+    /** Validates the file as proper UTF-8. */
+    fun validateUtf8(): Boolean {
+        val s = _state.value
+        return try {
+            open().use { stream ->
+                val bytes = stream.readBytes()
+                looksLikeUtf8(bytes, bytes.size)
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Creates a new file with the current content as a backup. */
+    fun createBackup() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val backup = container.fs.createTimestampedBackup(node)
+            _state.update {
+                it.copy(notice = if (backup != null) "Copia de seguridad creada" else "Error al crear copia de seguridad")
+            }
+        }
+    }
+
+    /** Inserts a timestamp at the current cursor position. */
+    fun insertTimestamp() {
+        val s = _state.value
+        if (!s.editing) return
+        
+        val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+        val newDraft = s.draft + timestamp
+        
+        _state.update { it.copy(draft = newDraft) }
+    }
+
+    /** Inserts a file header template. */
+    fun insertHeaderTemplate() {
+        val s = _state.value
+        if (!s.editing) return
+        
+        val header = """// File: ${node.name}
+// Created: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())}
+// Author: 
+// Description: 
+
+"""
+        val newDraft = header + s.draft
+        
+        _state.update { it.copy(draft = newDraft) }
+    }
+
     private suspend fun loadInitial() {
         _state.update { it.copy(loading = true, error = null) }
         try {

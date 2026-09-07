@@ -27,6 +27,13 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val semanticSearchEnabled: StateFlow<Boolean> = container.settings.semanticSearchEnabled
     val ocrEnabled: StateFlow<Boolean> = container.settings.ocrEnabled
     val smartGroupsEnabled: StateFlow<Boolean> = container.settings.smartGroupsEnabled
+    val darkTheme: StateFlow<Boolean> = container.settings.darkTheme
+    val fontSize: StateFlow<Int> = container.settings.fontSize
+    val showFileSize: StateFlow<Boolean> = container.settings.showFileSize
+    val showModifiedDate: StateFlow<Boolean> = container.settings.showModifiedDate
+    val defaultSortOrder: StateFlow<SortOrder> = container.settings.defaultSortOrder
+    val confirmOverwrite: StateFlow<Boolean> = container.settings.confirmOverwrite
+    val showThumbnails: StateFlow<Boolean> = container.settings.showThumbnails
 
     fun setAccent(accent: Accent) = container.settings.setAccent(accent)
 
@@ -52,6 +59,28 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setSmartGroupsEnabled(enabled: Boolean) = container.settings.setSmartGroupsEnabled(enabled)
 
+    fun setDarkTheme(enabled: Boolean) = container.settings.setDarkTheme(enabled)
+
+    fun setFontSize(size: Int) = container.settings.setFontSize(size)
+
+    fun setShowFileSize(show: Boolean) = container.settings.setShowFileSize(show)
+
+    fun setShowModifiedDate(show: Boolean) = container.settings.setShowModifiedDate(show)
+
+    fun setDefaultSortOrder(order: SortOrder) = container.settings.setDefaultSortOrder(order)
+
+    fun setConfirmOverwrite(enabled: Boolean) = container.settings.setConfirmOverwrite(enabled)
+
+    fun setShowThumbnails(show: Boolean) = container.settings.setShowThumbnails(show)
+
+    fun cycleDefaultSortOrder() {
+        val current = defaultSortOrder.value
+        val orders = SortOrder.entries
+        val currentIndex = orders.indexOf(current)
+        val nextIndex = (currentIndex + 1) % orders.size
+        setDefaultSortOrder(orders[nextIndex])
+    }
+
     fun resetSettings() = container.settings.resetAll()
 
     // --------------------------------------------------------- cache manager
@@ -66,4 +95,4 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         runCatching { container.imageLoader.diskCache?.clear() }
         runCatching { container.imageLoader.memoryCache?.clear() }
     }
-}
+}

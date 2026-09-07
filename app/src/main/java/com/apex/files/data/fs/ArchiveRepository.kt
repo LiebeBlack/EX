@@ -47,7 +47,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
     }
 
     fun isSupported(node: FileNode): Boolean = when (extensionOf(node.name)) {
-        "zip", "jar", "cbz", "tar", "tgz", "tar.gz", "gz" -> true
+        "zip", "jar", "cbz", "cbr", "tar", "tgz", "tar.gz", "gz" -> true
         else -> false
     }
 
@@ -62,7 +62,7 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
     fun open(node: FileNode): Handle {
         val file = fs.fileForReading(node)
         return when (extensionOf(node.name)) {
-            "zip", "jar", "cbz" -> ZipHandle(ZipFile(file))
+            "zip", "jar", "cbz", "cbr" -> ZipHandle(ZipFile(file))
             "tar" -> TarHandle(node.name, TarReader(FileInputStream(file)))
             "tgz", "tar.gz" -> TarHandle(
                 node.name,
@@ -325,6 +325,56 @@ class ArchiveRepository(private val context: Context, private val fs: FsReposito
         override suspend fun entries(): List<ArchiveEntry> = listOf(
             ArchiveEntry(outName, -1L, isDir = false, lastModified = file.lastModified())
         )
+
+        override fun name(): String = archiveName
+
+        override fun close() {}
+    }
+
+    private class Bz2Handle(private val archiveName: String, private val file: File) : Handle {
+        private val outName: String = archiveName.removeSuffix(".bz2").ifBlank { "extraido" }
+
+        override suspend fun entries(): List<ArchiveEntry> = listOf(
+            ArchiveEntry(outName, -1L, isDir = false, lastModified = file.lastModified())
+        )
+
+        override fun name(): String = archiveName
+
+        override fun close() {}
+    }
+
+    private class XzHandle(private val archiveName: String, private val file: File) : Handle {
+        private val outName: String = archiveName.removeSuffix(".xz").ifBlank { "extraido" }
+
+        override suspend fun entries(): List<ArchiveEntry> = listOf(
+            ArchiveEntry(outName, -1L, isDir = false, lastModified = file.lastModified())
+        )
+
+        override fun name(): String = archiveName
+
+        override fun close() {}
+    }
+
+    private class SevenZipHandle(private val archiveName: String, private val file: File) : Handle {
+        override suspend fun entries(): List<ArchiveEntry> {
+            // 7Z format requires external library - placeholder implementation
+            return listOf(
+                ArchiveEntry(archiveName, file.length(), isDir = false, lastModified = file.lastModified())
+            )
+        }
+
+        override fun name(): String = archiveName
+
+        override fun close() {}
+    }
+
+    private class RarHandle(private val archiveName: String, private val file: File) : Handle {
+        override suspend fun entries(): List<ArchiveEntry> {
+            // RAR format requires external library - placeholder implementation
+            return listOf(
+                ArchiveEntry(archiveName, file.length(), isDir = false, lastModified = file.lastModified())
+            )
+        }
 
         override fun name(): String = archiveName
 

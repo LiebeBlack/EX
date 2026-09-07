@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.model.FileNode
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,23 +13,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
 
 /** A user-starred folder or file. */
 data class Favorite(val node: FileNode)
 
 /**
  * Persisted "Favoritos" (starred) folders/files, shown on the Home screen
- * for one-tap access. Stored as JSON in app-private SharedPreferences;
+ * for one-tap access. Stored as JSON in encrypted SharedPreferences;
  * folders keep their SAF uri when applicable so they stay navigable.
  */
-class FavoritesStore(context: Context) {
+@Singleton
+class FavoritesStore @Inject constructor(
+    @ApplicationContext context: Context,
+    @Named("EncryptedFavorites") encryptedPrefs: SharedPreferences
+) {
 
     private companion object {
         const val KEY = "favorites_v1"
     }
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("apex_favorites", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = encryptedPrefs
 
     private val _items = MutableStateFlow(load())
     val items: StateFlow<List<Favorite>> = _items.asStateFlow()

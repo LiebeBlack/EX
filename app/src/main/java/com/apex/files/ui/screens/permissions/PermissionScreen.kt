@@ -19,12 +19,16 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Usb
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -40,7 +44,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Storage gate shown before the app: All Files Access, media permissions,
- * and a SAF fallback for devices that deny the broad permission.
+ * Wi-Fi scanning with warning dialog, and a SAF fallback for devices that deny the broad permission.
  */
 @Composable
 fun PermissionScreen(
@@ -51,6 +55,9 @@ fun PermissionScreen(
     val allFilesGranted = Permissions.allFilesGranted(context)
     val mediaGranted = Permissions.mediaGranted(context)
     val mediaPartial = Permissions.hasPartialMediaAccess(context)
+    val wifiGranted = Permissions.wifiPermissionGranted(context)
+    
+    var showWifiWarning by remember { mutableStateOf(false) }
 
     val mediaLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -58,6 +65,12 @@ fun PermissionScreen(
         // Only advance when every requested permission was granted;
         // otherwise the gate recomposes and the user can retry.
         if (result.values.all { it }) onGranted()
+    }
+
+    val wifiLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) onGranted()
     }
 
     val treeLauncher = rememberLauncherForActivityResult(
@@ -69,7 +82,7 @@ fun PermissionScreen(
     }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        ApexTopBar(title = "APEX", subtitle = "Acceso al almacenamiento")
+        ApexTopBar(title = "APEX", subtitle = "Permisos requeridos")
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -98,6 +111,16 @@ fun PermissionScreen(
                 onAction = { mediaLauncher.launch(Permissions.mediaPermissions()) },
             )
             PermissionCard(
+                icon = Icons.Outlined.Wifi,
+                title = "Escaneo Wi-Fi",
+                description = "Para el analizador de redes y dispositivos conectados",
+                granted = wifiGranted,
+                actionLabel = "Conceder",
+                onAction = {
+                    showWifiWarning = true
+                },
+            )
+            PermissionCard(
                 icon = Icons.Outlined.Usb,
                 title = "Explorar con SAF",
                 description = "Alternativa sin acceso total: elige una carpeta (SD o USB-OTG)",
@@ -105,7 +128,7 @@ fun PermissionScreen(
                 actionLabel = "Elegir carpeta",
                 onAction = { treeLauncher.launch(null) },
             )
-            if (allFilesGranted && mediaGranted) {
+            if (allFilesGranted && mediaGranted && wifiGranted) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onGranted) {
                         Text("Iniciar APEX", color = MaterialTheme.colorScheme.primary)
@@ -120,6 +143,22 @@ fun PermissionScreen(
                 textAlign = TextAlign.Center,
             )
         }
+    }
+
+    // Wi-Fi permission warning dialog with 3-second countdown
+    if (showWifiWarning) {
+        WifiPermissionWarningDialog(
+            onAccept = {
+                showWifiWarning = false
+                val wifiPermissions = Permissions.wifiPermissions()
+                if (wifiPermissions.isNotEmpty()) {
+                    wifiLauncher.launch(wifiPermissions.first())
+                }
+            },
+            onDismiss = {
+                showWifiWarning = false
+            }
+        )
     }
 }
 

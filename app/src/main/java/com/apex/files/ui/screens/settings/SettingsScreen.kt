@@ -23,16 +23,22 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Overlay
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.SettingsBackupRestore
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -92,6 +98,13 @@ fun SettingsScreen() {
     val semanticSearchEnabled by vm.semanticSearchEnabled.collectAsStateWithLifecycle()
     val ocrEnabled by vm.ocrEnabled.collectAsStateWithLifecycle()
     val smartGroupsEnabled by vm.smartGroupsEnabled.collectAsStateWithLifecycle()
+    val darkTheme by vm.darkTheme.collectAsStateWithLifecycle()
+    val fontSize by vm.fontSize.collectAsStateWithLifecycle()
+    val showFileSize by vm.showFileSize.collectAsStateWithLifecycle()
+    val showModifiedDate by vm.showModifiedDate.collectAsStateWithLifecycle()
+    val defaultSortOrder by vm.defaultSortOrder.collectAsStateWithLifecycle()
+    val confirmOverwrite by vm.confirmOverwrite.collectAsStateWithLifecycle()
+    val showThumbnails by vm.showThumbnails.collectAsStateWithLifecycle()
 
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
@@ -196,6 +209,169 @@ fun SettingsScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DirectionChip("Lista", viewMode == ViewMode.LIST) { vm.setViewMode(ViewMode.LIST) }
                     DirectionChip("Cuadrícula", viewMode == ViewMode.GRID) { vm.setViewMode(ViewMode.GRID) }
+                }
+            }
+
+            // Display settings
+            ApexCard(Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.DarkMode, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Modo oscuro", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Activar tema oscuro para OLED",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = darkTheme,
+                            onCheckedChange = vm::setDarkTheme,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.TextFields, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Tamaño de fuente", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Tamaño de fuente para visores de texto: $fontSize px",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Row(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { if (fontSize > 10) vm.setFontSize(fontSize - 1) }) {
+                                Text("-", color = MaterialTheme.colorScheme.primary)
+                            }
+                            Text("$fontSize", style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = { if (fontSize < 24) vm.setFontSize(fontSize + 1) }) {
+                                Text("+", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Storage, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Mostrar tamaño de archivo", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Mostrar tamaño en lista de archivos",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = showFileSize,
+                            onCheckedChange = vm::setShowFileSize,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.DateRange, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Mostrar fecha modificación", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Mostrar fecha de modificación en lista",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = showModifiedDate,
+                            onCheckedChange = vm::setShowModifiedDate,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
+                }
+            }
+
+            // File operations settings
+            ApexCard(Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.SwapVert, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Orden predeterminado", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Ordenamiento por defecto: ${defaultSortOrder.name}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = { vm.cycleDefaultSortOrder() }) {
+                            Text("Cambiar", color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Overlay, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Confirmar sobrescritura", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Pedir confirmación antes de sobrescribir archivos",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = confirmOverwrite,
+                            onCheckedChange = vm::setConfirmOverwrite,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Mostrar miniaturas", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Mostrar imágenes en vista de cuadrícula",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = showThumbnails,
+                            onCheckedChange = vm::setShowThumbnails,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = ApexBorder,
+                                uncheckedBorderColor = ApexBorder,
+                            ),
+                        )
+                    }
                 }
             }
 

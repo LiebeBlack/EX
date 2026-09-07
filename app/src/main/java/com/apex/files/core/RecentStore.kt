@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.apex.files.data.fs.CategoryEngine
 import com.apex.files.data.model.FileNode
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
 
 /** A file opened recently, newest first. */
 data class RecentEntry(
@@ -21,18 +25,21 @@ data class RecentEntry(
 
 /**
  * Persisted, capped history of opened files (path / name / size / modified /
- * optional SAF uri). Written to app-private SharedPreferences via org.json
+ * optional SAF uri). Written to encrypted SharedPreferences via org.json
  * (part of the Android platform — no extra dependencies).
  */
-class RecentStore(context: Context) {
+@Singleton
+class RecentStore @Inject constructor(
+    @ApplicationContext context: Context,
+    @Named("EncryptedRecents") encryptedPrefs: SharedPreferences
+) {
 
     companion object {
         const val CAP = 20
         private const val KEY = "recent_v1"
     }
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("apex_recents", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = encryptedPrefs
 
     private val _items = MutableStateFlow(load())
     val items: StateFlow<List<RecentEntry>> = _items.asStateFlow()

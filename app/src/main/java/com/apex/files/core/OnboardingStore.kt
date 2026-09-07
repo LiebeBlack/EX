@@ -2,16 +2,24 @@ package com.apex.files.core
 
 import android.content.Context
 import android.content.SharedPreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
 
 /**
  * First-run flags (welcome tour). Kept in their own preferences file so
  * resetting the app settings never touches them unless explicitly asked
  * (Settings → "Restablecer ajustes" resets both).
+ * Now uses EncryptedSharedPreferences for secure storage.
  */
-class OnboardingStore(context: Context) {
+@Singleton
+class OnboardingStore @Inject constructor(
+    @ApplicationContext context: Context,
+    @Named("EncryptedOnboarding") encryptedPrefs: SharedPreferences
+) {
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("apex_onboarding", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = encryptedPrefs
 
     val tourSeen: Boolean
         get() = prefs.getBoolean(KEY_TOUR_SEEN, false)

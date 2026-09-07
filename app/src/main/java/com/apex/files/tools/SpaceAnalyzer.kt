@@ -123,4 +123,98 @@ class SpaceAnalyzer(private val fs: FsRepository) {
         if (restSize <= 0L) return kept
         return kept + SpaceNode("Otros", restSize, Category.OTHER, isFile = false)
     }
+
+    /** Analyzes storage usage by category. */
+    fun analyzeByCategory(root: FileNode): Flow<Map<Category, Long>> = flow {
+        val categorySizes = mutableMapOf<Category, Long>()
+        
+        suspend fun walk(node: FileNode) {
+            currentCoroutineContext().ensureActive()
+            if (node.isDir) {
+                val children = fs.list(node, showHidden = true, sort = SortOrder.NAME)
+                for (child in children) {
+                    walk(child)
+                }
+            } else {
+                categorySizes[node.category] = (categorySizes[node.category] ?: 0L) + node.size
+            }
+        }
+        
+        walk(root)
+        emit(categorySizes.toMap())
+    }.flowOn(Dispatchers.IO)
+
+    /** Finds the largest files in a directory tree. */
+    fun findLargestFiles(root: FileNode, limit: Int = 100): Flow<List<SpaceNode>> = flow {
+        val largestFiles = ArrayList<SpaceNode>()
+        
+        suspend fun walk(node: FileNode) {
+            currentCoroutineContext().ensureActive()
+            if (node.isDir) {
+                val children = fs.list(node, showHidden = true, sort = SortOrder.NAME)
+                for (child in children) {
+                    walk(child)
+                }
+            } else {
+                if (largestFiles.size < limit || node.size > largestFiles.last().size) {
+                    largestFiles.add(
+                        SpaceNode(
+                            name = node.name,
+                            size = node.size,
+                            category = node.category,
+                            isFile = true,
+                            path = node.path,
+                            lastModified = node.lastModified,
+                        )
+                    )
+                    largestFiles.sortByDescending { it.size }
+                    if (largestFiles.size > limit) {
+                        largestFiles.removeAt(largestFiles.size - 1)
+                    }
+                }
+            }
+        }
+        
+        walk(root)
+        emit(largestFiles)
+    }.flowOn(Dispatchers.IO)
+
+    /** Analyzes file age distribution. */
+    fun analyzeFileAge(root: FileNode): Flow<Map<String, Int>> = flow {
+        val ageDistribution = mutableMapOf(
+            "Hoy" to 0,
+            "Esta semana" to 0,
+            "Este mes" to 0,
+            "Este año" to 0,
+            "Antiguo" to 0,
+        )
+        
+        val now = System.currentTimeMillis()
+        val day = 24L * 3600_000
+        val week = 7L * day
+        val month = 30L * day
+        val year = 365L * day
+        
+        suspend fun walk(node: FileNode) {
+            currentCoroutineContext().ensureActive()
+            if (node.isDir) {
+                val children = fs.list(node, showHidden = true, sort = SortOrder.NAME)
+                for (child in children) {
+                    walk(child)
+                }
+            } else {
+                val age = now - node.lastModified
+                when {
+                    age < day -> ageDistribution["Hoy"] = (ageDistribution["Hoy"] ?: 0) + 1
+                    age < week -> ageDistribution["Esta semana"] = (ageDistribution["Esta semana"] ?: 0) + 1
+                    age < month -> ageDistribution["Este mes"] = (ageDistribution["Este mes"] ?: 0) + 1
+                    age < year -> ageDistribution["Este año"] = (ageDistribution["Este año"] ?: 0) + 1
+                    else -> ageDistribution["Antiguo"] = (ageDistribution["Antiguo"] ?: 0) + 1
+                }
+            }
+        }
+        
+        walk(root)
+        emit(ageDistribution.toMap())
+    }.flowOn(Dispatchers.IO)
 }

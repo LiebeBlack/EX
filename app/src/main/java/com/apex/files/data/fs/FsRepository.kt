@@ -874,7 +874,401 @@ class FsRepository(private val context: Context) {
         val out = openOutputStream(node) ?: return@withContext false
         try {
             out.use { it.write(content.toByteArray(charset)) }
+            rescan(node.path)
             true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Appends [content] to the end of [node] with the given charset. Returns false on failure. */
+    suspend fun appendText(
+        node: FileNode,
+        content: String,
+        charset: Charset,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val out = try {
+            if (node.uri != null) resolver.openOutputStream(node.uri, "wa")
+            else FileOutputStream(File(node.path), true)
+        } catch (e: Exception) {
+            null
+        }
+        if (out == null) return@withContext false
+        try {
+            out.use { it.write(content.toByteArray(charset)) }
+            rescan(node.path)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Reads the text content of [node] with the given charset. Returns null on failure. */
+    suspend fun readText(
+        node: FileNode,
+        charset: Charset,
+    ): String? = withContext(Dispatchers.IO) {
+        val input = openInputStream(node) ?: return@withContext null
+        try {
+            input.use { it.readBytes().toString(charset) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Creates a backup copy of [node] with a .bak extension. Returns the backup node or null. */
+    suspend fun createBackup(node: FileNode): FileNode? = withContext(Dispatchers.IO) {
+        if (node.uri != null) return@withContext null
+        val file = File(node.path)
+        if (!file.exists()) return@withContext null
+        
+        val backupName = "${file.name}.bak"
+        val backupFile = File(file.parentFile, backupName)
+        
+        return@withContext if (file.copyTo(backupFile, overwrite = true)) {
+            backupFile.toNode()
+        } else {
+            null
+        }
+    }
+
+    /** Creates multiple backups with timestamp (file.txt → file_20250907_143022.txt.bak). */
+    suspend fun createTimestampedBackup(node: FileNode): FileNode? = withContext(Dispatchers.IO) {
+        if (node.uri != null) return@withContext null
+        val file = File(node.path)
+        if (!file.exists()) return@withContext null
+        
+        val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+        val dot = file.name.lastIndexOf('.')
+        val base = if (dot > 0) file.name.substring(0, dot) else file.name
+        val ext = if (dot > 0) file.name.substring(dot) else ""
+        val backupName = "${base}_${timestamp}${ext}.bak"
+        val backupFile = File(file.parentFile, backupName)
+        
+        return@withContext if (file.copyTo(backupFile, overwrite = false)) {
+            backupFile.toNode()
+        } else {
+            null
+        }
+    }
+
+    /** Merges text files by concatenating their contents. */
+    suspend fun mergeTextFiles(sources: List<FileNode>, dest: FileNode, charset: Charset): Boolean = withContext(Dispatchers.IO) {
+        val out = openOutputStream(dest) ?: return@withContext false
+        try {
+            out.use { output ->
+                for (source in sources) {
+                    val input = openInputStream(source) ?: continue
+                    try {
+                        input.use { input ->
+                            output.write(input.readBytes())
+                            output.write("\n".toByteArray(charset))
+                        }
+                    } catch (e: Exception) {
+                        // Continue with next file if one fails
+                    }
+                }
+            }
+            rescan(dest.path)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Splits a text file into multiple files by line count. */
+    suspend fun splitTextFile(
+        source: FileNode,
+        linesPerFile: Int,
+        destDir: FileNode,
+        charset: Charset,
+    ): List<FileNode> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<FileNode>()
+        val input = openInputStream(source) ?: return@withContext results
+        try {
+            input.use { input ->
+                val reader = input.bufferedReader(charset)
+                var fileCounter = 1
+                var lineCounter = 0
+                var currentContent = StringBuilder()
+                val baseName = source.name.substringBeforeLast('.')
+                val ext = source.name.substringAfterLast('.', "")
+                
+                reader.forEachLine { line ->
+                    currentContent.append(line).append("\n")
+                    lineCounter++
+                    
+                    if (lineCounter >= linesPerFile) {
+                        val newFileName = "${baseName}_part${fileCounter}.${ext}"
+                        val newNode = createFile(destDir, newFileName)
+                        if (newNode != null) {
+                            saveText(newNode, currentContent.toString(), charset)
+                            results.add(newNode)
+                        }
+                        currentContent.clear()
+                        lineCounter = 0
+                        fileCounter++
+                    }
+                }
+                
+                // Write remaining content
+                if (currentContent.isNotEmpty()) {
+                    val newFileName = "${baseName}_part${fileCounter}.${ext}"
+                    val newNode = createFile(destDir, newFileName)
+                    if (newNode != null) {
+                        saveText(newNode, currentContent.toString(), charset)
+                        results.add(newNode)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Return partial results on error
+        }
+        results
+    }
+
+    /** Batch rename files using a pattern (supports {n} for numbering). */
+    suspend fun batchRename(
+        files: List<FileNode>,
+        pattern: String,
+        startNumber: Int = 1,
+    ): OpResult = withContext(Dispatchers.IO) {
+        val acc = OpAccumulator()
+        for ((index, file) in files.withIndex()) {
+            currentCoroutineContext().ensureActive()
+            if (file.uri != null) {
+                acc.addSkipped()
+                continue
+            }
+            
+            val number = startNumber + index
+            val newName = pattern.replace("{n}", number.toString())
+            val renamed = rename(file, newName)
+            
+            if (renamed != null) {
+                acc.addFiles()
+            } else {
+                acc.error("No se pudo renombrar ${file.name}")
+            }
+        }
+        acc.result()
+    }
+
+    /** Creates symbolic link (if supported by the filesystem). */
+    suspend fun createSymlink(target: FileNode, linkName: String, parentDir: FileNode): FileNode? = withContext(Dispatchers.IO) {
+        if (target.uri != null || parentDir.uri != null) return@withContext null
+        
+        val parent = File(parentDir.path)
+        val linkFile = File(parent, linkName)
+        val targetFile = File(target.path)
+        
+        return@withContext try {
+            java.nio.file.Files.createSymbolicLink(linkFile.toPath(), targetFile.toPath())
+            linkFile.toNode()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Changes file/directory ownership (requires root, may fail on most devices). */
+    suspend fun changeOwnership(node: FileNode, uid: Int, gid: Int): Boolean = withContext(Dispatchers.IO) {
+        if (node.uri != null) return@withContext false
+        return@withContext try {
+            val file = File(node.path)
+            val path = file.absolutePath
+            // This requires root access and may not work on most Android devices
+            Runtime.getRuntime().exec(arrayOf("chown", "$uid:$gid", path)).waitFor() == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Changes file permissions (UNIX-style, e.g., 755 for rwxr-xr-x). */
+    suspend fun changePermissions(node: FileNode, permissions: Int): Boolean = withContext(Dispatchers.IO) {
+        if (node.uri != null) return@withContext false
+        return@withContext try {
+            val file = File(node.path)
+            file.setExecutable((permissions and 0o111) != 0, false)
+            file.setReadable((permissions and 0o444) != 0, false)
+            file.setWritable((permissions and 0o222) != 0, false)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Advanced file comparison: checks if two files have identical content. */
+    suspend fun filesAreIdentical(node1: FileNode, node2: FileNode): Boolean = withContext(Dispatchers.IO) {
+        if (node1.size != node2.size) return@withContext false
+        
+        val input1 = openInputStream(node1) ?: return@withContext false
+        val input2 = openInputStream(node2) ?: return@withContext false
+        
+        try {
+            input1.use { in1 ->
+                input2.use { in2 ->
+                    val buffer1 = ByteArray(8192)
+                    val buffer2 = ByteArray(8192)
+                    while (true) {
+                        val read1 = in1.read(buffer1)
+                        val read2 = in2.read(buffer2)
+                        if (read1 != read2) return@withContext false
+                        if (read1 == -1) return@withContext true
+                        if (!buffer1.contentEquals(buffer2)) return@withContext false
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Finds files similar to a given file by content similarity (simple prefix matching). */
+    suspend fun findSimilarFiles(
+        reference: FileNode,
+        searchDir: FileNode,
+        similarityThreshold: Float = 0.8f,
+    ): List<FileNode> = withContext(Dispatchers.IO) {
+        val similarFiles = mutableListOf<FileNode>()
+        val refContent = readText(reference, Charsets.UTF_8) ?: return@withContext similarFiles
+        
+        val children = list(searchDir, showHidden = true, sort = SortOrder.NAME)
+        for (child in children) {
+            if (child.isDir || child.size > 10 * 1024 * 1024) continue // Skip large files and dirs
+            
+            val content = readText(child, Charsets.UTF_8) ?: continue
+            val similarity = calculateSimilarity(refContent, content)
+            
+            if (similarity >= similarityThreshold) {
+                similarFiles.add(child)
+            }
+        }
+        similarFiles
+    }
+
+    private fun calculateSimilarity(text1: String, text2: String): Float {
+        if (text1.isEmpty() || text2.isEmpty()) return 0f
+        
+        val set1 = text1.split("\\s+".toRegex()).toSet()
+        val set2 = text2.split("\\s+".toRegex()).toSet()
+        
+        val intersection = set1.intersect(set2).size
+        val union = set1.union(set2).size
+        
+        return if (union == 0) 0f else intersection.toFloat() / union.toFloat()
+    }
+
+    /** Monitors a directory for changes (polling-based). */
+    suspend fun monitorDirectory(
+        dir: FileNode,
+        intervalMs: Long = 2000L,
+        onChange: (List<FileNode>) -> Unit,
+    ) {
+        var lastSnapshot = list(dir, showHidden = true, sort = SortOrder.NAME)
+        
+        while (true) {
+            kotlinx.coroutines.delay(intervalMs)
+            val currentSnapshot = list(dir, showHidden = true, sort = SortOrder.NAME)
+            
+            if (currentSnapshot.map { it.path }.toSet() != lastSnapshot.map { it.path }.toSet()) {
+                onChange(currentSnapshot)
+                lastSnapshot = currentSnapshot
+            }
+        }
+    }
+
+    /** Compresses individual file using GZIP. */
+    suspend fun compressGzip(source: FileNode, dest: FileNode): Boolean = withContext(Dispatchers.IO) {
+        val input = openInputStream(source) ?: return@withContext false
+        val output = openOutputStream(dest) ?: return@withContext false
+        
+        try {
+            input.use { inStream ->
+                output.use { outStream ->
+                    java.util.zip.GZIPOutputStream(outStream).use { gzip ->
+                        inStream.copyTo(gzip)
+                    }
+                }
+            }
+            rescan(dest.path)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Decompresses GZIP file. */
+    suspend fun decompressGzip(source: FileNode, dest: FileNode): Boolean = withContext(Dispatchers.IO) {
+        val input = openInputStream(source) ?: return@withContext false
+        val output = openOutputStream(dest) ?: return@withContext false
+        
+        try {
+            input.use { inStream ->
+                output.use { outStream ->
+                    java.util.zip.GZIPInputStream(inStream).use { gzip ->
+                        gzip.copyTo(outStream)
+                    }
+                }
+            }
+            rescan(dest.path)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Checks if a file/directory exists at the given path. */
+    fun exists(node: FileNode): Boolean {
+        return if (node.uri != null) {
+            saf.document(node) != null
+        } else {
+            File(node.path).exists()
+        }
+    }
+
+    /** Gets the last modified timestamp of a file/directory. */
+    fun getLastModified(node: FileNode): Long {
+        return if (node.uri != null) {
+            saf.document(node)?.lastModified() ?: 0L
+        } else {
+            File(node.path).lastModified()
+        }
+    }
+
+    /** Sets the last modified timestamp of a file/directory. */
+    suspend fun setLastModified(node: FileNode, timestamp: Long): Boolean = withContext(Dispatchers.IO) {
+        if (node.uri != null) return@withContext false
+        try {
+            File(node.path).setLastModified(timestamp)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Gets file permissions (read/write/execute) for a file. */
+    fun getPermissions(node: FileNode): Triple<Boolean, Boolean, Boolean> {
+        return if (node.uri != null) {
+            val doc = saf.document(node)
+            Triple(
+                doc?.canRead() ?: false,
+                doc?.canWrite() ?: false,
+                false // SAF doesn't expose execute permission
+            )
+        } else {
+            val file = File(node.path)
+            Triple(
+                file.canRead(),
+                file.canWrite(),
+                file.canExecute()
+            )
+        }
+    }
+
+    /** Makes a file or directory read-only or writable. */
+    suspend fun setReadOnly(node: FileNode, readOnly: Boolean): Boolean = withContext(Dispatchers.IO) {
+        if (node.uri != null) return@withContext false
+        try {
+            File(node.path).setReadOnly(readOnly)
         } catch (e: Exception) {
             false
         }

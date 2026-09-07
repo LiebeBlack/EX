@@ -32,6 +32,7 @@ import com.apex.files.ui.components.ApexCard
 import com.apex.files.ui.components.ApexTopBar
 import com.apex.files.ui.theme.MonoTextStyleSmall
 import kotlinx.coroutines.delay
+import coil.ImageLoader
 
 /**
  * Hidden diagnostics surface (long-press on the version in “Acerca de”).
@@ -81,13 +82,45 @@ fun DiagnosticsScreen() {
                 }
             }
 
-            SectionTitle("Índices")
+            SectionTitle("Memoria y Rendimiento")
             ApexCard(Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MetricRow("Índice de búsqueda", "$searchIndexSize / ${MemoryIndex.CAP} archivos")
-                    MetricRow("Módulo semántico", if (semanticOn) "Activo" else "Desactivado")
-                    MetricRow("Índice de contenido", "$contentIndexSize / ${ContentIndex.MAX_ENTRIES} entradas")
-                    MetricRow("Snapshot de contenido", SizeFormatter.format(contentBytes))
+                    MetricRow("Memoria usada (aprox)", "${(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024 / 1024} MB")
+                    MetricRow("Memoria máxima", "${Runtime.getRuntime().maxMemory() / 1024 / 1024} MB")
+                    MetricRow("Memoria libre", "${Runtime.getRuntime().freeMemory() / 1024 / 1024} MB")
+                    MetricRow("Procesadores", "${Runtime.getRuntime().availableProcessors()}")
+                }
+            }
+
+            SectionTitle("Almacenamiento")
+            ApexCard(Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val internal = remember(tick) { 
+                        android.os.Environment.getExternalStorageDirectory()?.freeSpace ?: 0L 
+                    }
+                    MetricRow("Espacio libre interno", SizeFormatter.format(internal))
+                    MetricRow("Usado por app", "${container.imageLoader.diskCache?.size ?: 0L / 1024} KB")
+                }
+            }
+
+            SectionTitle("Configuración")
+            ApexCard(Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MetricRow("Acento", container.settings.accent.value.name)
+                    MetricRow("Modo oscuro", if (container.settings.darkTheme.value) "Sí" else "No")
+                    MetricRow("Mostrar ocultos", if (container.settings.showHidden.value) "Sí" else "No")
+                    MetricRow("Densidad", container.settings.density.value.name)
+                    MetricRow("Papelera", if (container.settings.trashEnabled.value) "Sí" else "No")
+                }
+            }
+
+            SectionTitle("Funcionalidades")
+            ApexCard(Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MetricRow("Búsqueda semántica", if (semanticOn) "Activo" else "Inactivo")
+                    MetricRow("OCR", if (container.settings.ocrEnabled.value) "Activo" else "Inactivo")
+                    MetricRow("Grupos inteligentes", if (container.settings.smartGroupsEnabled.value) "Activo" else "Inactivo")
+                    MetricRow("Confirmar sobrescritura", if (container.settings.confirmOverwrite.value) "Sí" else "No")
                 }
             }
 

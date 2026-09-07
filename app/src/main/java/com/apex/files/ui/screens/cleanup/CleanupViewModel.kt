@@ -102,4 +102,35 @@ class CleanupViewModel(private val container: AppContainer) : ViewModel() {
     fun reset() {
         _state.update { it.copy(done = false, items = emptyList(), selection = emptySet()) }
     }
+
+    /** Advanced cleanup: analyze by file age and size */
+    fun analyzeByAge() {
+        if (_state.value.scanning) return
+        viewModelScope.launch {
+            val items = _state.value.items
+            val agedItems = items.filter { 
+                val age = System.currentTimeMillis() - it.node.lastModified
+                age > 30L * 24 * 3600_000 // Older than 30 days
+            }
+            _state.update { it.copy(items = agedItems) }
+        }
+    }
+
+    /** Filter items by minimum size */
+    fun filterByMinSize(minBytes: Long) {
+        val filtered = _state.value.items.filter { it.bytes >= minBytes }
+        _state.update { it.copy(items = filtered) }
+    }
+
+    /** Group items by kind and show statistics */
+    fun getStatistics(): Map<String, Int> {
+        return _state.value.items.groupBy { it.kind.name }.mapValues { it.size }
+    }
+
+    /** Analyze disk space impact by directory */
+    fun analyzeSpaceImpact(): Map<String, Long> {
+        return _state.value.items.groupBy { 
+            it.path.substringBeforeLast('/', "")
+        }.mapValues { it.value.sumOf { item -> item.bytes } }
+    }
 }

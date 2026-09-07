@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,7 @@ android {
         compose = true
         buildConfig = true
     }
+}
 
     lint {
         abortOnError = true
@@ -133,5 +136,14 @@ dependencies {
     // OCR (bundled Latin model, works without Play Services) + PDF text layer.
     implementation(libs.mlkit.text.recognition)
     implementation(libs.pdfbox.android)
+    
+    // Hilt Dependency Injection
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
+    ksp(libs.hilt.compiler)
+    
+    // Android Security for EncryptedSharedPreferences
+    implementation(libs.androidx.security)
+    
     testImplementation(libs.junit)
 }

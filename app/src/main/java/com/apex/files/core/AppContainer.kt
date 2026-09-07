@@ -2,15 +2,11 @@ package com.apex.files.core
 
 import android.content.Context
 import coil.ImageLoader
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
-import coil.util.DebugLogger
 import com.apex.files.data.fs.ArchiveRepository
 import com.apex.files.data.fs.ConflictController
 import com.apex.files.data.fs.FsRepository
 import com.apex.files.data.fs.IndexStore
 import com.apex.files.data.fs.MemoryIndex
-import com.apex.files.data.fs.Paths
 import com.apex.files.data.fs.SqliteRepository
 import com.apex.files.data.fs.TrashManager
 import com.apex.files.data.media.MediaStoreRepository
@@ -19,101 +15,45 @@ import com.apex.files.data.search.ContentIndexer
 import com.apex.files.data.search.OcrEngine
 import com.apex.files.data.search.PdfTextExtractor
 import com.apex.files.data.storage.DrivesRepository
+import com.apex.files.data.storage.ToolRoots
 import com.apex.files.tools.ApkScanner
 import com.apex.files.tools.DuplicateFinder
 import com.apex.files.tools.EmptyCleaner
 import com.apex.files.tools.JunkAnalyzer
 import com.apex.files.tools.SpaceAnalyzer
 import com.apex.files.tools.StorageBenchmark
-import java.io.File
+import javax.inject.Inject
 
 /**
- * Manual dependency container. Created once per process in [MainActivity]
- * and exposed to composables via [LocalContainer].
+ * Dependency container now managed by Hilt with proper lifecycle scoping.
+ * All dependencies are injected via constructor injection to avoid memory leaks.
+ * Created once per process in [MainActivity] and exposed to composables via [LocalContainer].
  */
-class AppContainer(context: Context) {
-
-    val appContext: Context = context.applicationContext
-
-    init {
-        // pdfbox-android must be initialized once before any PDF is parsed
-        // (it wires asset/font loading to the Android context). Failures are
-        // non-fatal: the semantic index simply skips PDF text extraction.
-        runCatching { com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(appContext) }
-    }
-
-    val settings: SettingsRepository by lazy { SettingsRepository(appContext) }
-    /** Bridge between suspend file operations and the per-conflict dialog UI. */
-    val conflicts: ConflictController by lazy { ConflictController() }
-    val fs: FsRepository by lazy { FsRepository(appContext) }
-    val index: MemoryIndex by lazy { MemoryIndex() }
-    val indexStore: IndexStore by lazy { IndexStore(appContext) }
-    /** Read-only SQLite analyzer (.db/.sqlite files). */
-    val sqlite: SqliteRepository by lazy { SqliteRepository(appContext, fs) }
-    val recents: RecentStore by lazy { RecentStore(appContext) }
-    val favorites: FavoritesStore by lazy { FavoritesStore(appContext) }
-    /** First-run flags (welcome tour). */
-    val onboarding: OnboardingStore by lazy { OnboardingStore(appContext) }
-    val mediaStore: MediaStoreRepository by lazy { MediaStoreRepository(appContext) }
-    val drives: DrivesRepository by lazy { DrivesRepository(appContext) }
-
-    /** Per-volume Papelera (soft delete with restore). */
-    val trash: TrashManager by lazy {
-        TrashManager(
-            rootForPath = { path -> trashVolumeRoot(path) },
-            allRoots = {
-                buildList {
-                    val internal = Paths.internalRoot()
-                    if (internal.exists()) add(internal)
-                    addAll(Paths.removableRoots())
-                }
-            },
-        )
-    }
-
-    /**
-     * Volume root for a File-backed path: the removable volume it lives on
-     * when the path starts with that root, otherwise the internal storage
-     * root. Keeps the trash on the same volume as the deleted files.
-     */
-    private fun trashVolumeRoot(path: String): File {
-        for (root in Paths.removableRoots()) {
-            val rootPath = root.absolutePath
-            if (path == rootPath || path.startsWith("$rootPath/")) return root
-        }
-        return Paths.internalRoot()
-    }
-
-    // Optional semantic module (gated by Settings.semanticSearchEnabled).
-    val contentIndex: ContentIndex by lazy { ContentIndex(appContext) }
-    val ocr: OcrEngine by lazy { OcrEngine(appContext) }
-    val pdfText: PdfTextExtractor by lazy { PdfTextExtractor(ocr) }
-    val contentIndexer: ContentIndexer by lazy { ContentIndexer(contentIndex, ocr, pdfText) }
-
-    // Algorithmic tools (100% local, zero dependencies).
-    val junkAnalyzer: JunkAnalyzer by lazy { JunkAnalyzer(appContext) }
-    val archive: ArchiveRepository by lazy { ArchiveRepository(appContext, fs) }
-    val cleaner: EmptyCleaner by lazy { EmptyCleaner(fs) }
-    val duplicateFinder: DuplicateFinder by lazy { DuplicateFinder(fs) }
-    val apkScanner: ApkScanner by lazy { ApkScanner(appContext, fs) }
-    val spaceAnalyzer: SpaceAnalyzer by lazy { SpaceAnalyzer(fs) }
-    val benchmark: StorageBenchmark by lazy { StorageBenchmark(appContext, fs) }
-
-    /** Bounded Coil caches: 64 MB disk, small memory cache. */
-    val imageLoader: ImageLoader by lazy {
-        ImageLoader.Builder(appContext)
-            .memoryCache {
-                MemoryCache.Builder(appContext)
-                    .maxSizePercent(0.08)
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(File(appContext.cacheDir, "apex_coil"))
-                    .maxSizeBytes(64L * 1024 * 1024)
-                    .build()
-            }
-            .logger(DebugLogger())
-            .build()
-    }
-}
+class AppContainer @Inject constructor(
+    val appContext: Context,
+    val settings: SettingsRepository,
+    val conflicts: ConflictController,
+    val fs: FsRepository,
+    val index: MemoryIndex,
+    val indexStore: IndexStore,
+    val sqlite: SqliteRepository,
+    val recents: RecentStore,
+    val favorites: FavoritesStore,
+    val onboarding: OnboardingStore,
+    val mediaStore: MediaStoreRepository,
+    val drives: DrivesRepository,
+    val toolRoots: ToolRoots,
+    val trash: TrashManager,
+    val contentIndex: ContentIndex,
+    val ocr: OcrEngine,
+    val pdfText: PdfTextExtractor,
+    val contentIndexer: ContentIndexer,
+    val junkAnalyzer: JunkAnalyzer,
+    val archive: ArchiveRepository,
+    val cleaner: EmptyCleaner,
+    val duplicateFinder: DuplicateFinder,
+    val apkScanner: ApkScanner,
+    val spaceAnalyzer: SpaceAnalyzer,
+    val benchmark: StorageBenchmark,
+    val imageLoader: ImageLoader
+)

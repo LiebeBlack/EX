@@ -6,11 +6,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.apex.files.core.AppContainer
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 /**
  * Builds a ViewModel through [AppContainer], keyed so independent screen
  * instances never share state.
+ * NOTE: This is deprecated in favor of Hilt injection. Use @HiltViewModel
+ * annotation on ViewModels and inject dependencies via constructor.
  */
+@Deprecated("Use Hilt injection with @HiltViewModel instead")
 @Composable
 inline fun <reified VM : ViewModel> apexViewModel(
     key: String,

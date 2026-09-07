@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoveToInbox
@@ -79,12 +80,23 @@ fun SmartGroupsScreen() {
     val vm: SmartGroupsViewModel = apexViewModel(key = "smart-groups") { c -> SmartGroupsViewModel(c) }
     val state by vm.state.collectAsStateWithLifecycle()
     var moveGroup by remember { mutableStateOf<SmartGroup?>(null) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var newGroupName by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize()) {
         ApexTopBar(
             title = if (state.openGroup == null) "Carpetas inteligentes" else state.openGroup!!.label,
             onBack = {
                 if (state.openGroup != null) vm.backToGroups() else navigator.pop()
+            },
+            actions = {
+                if (state.openGroup == null) {
+                    androidx.compose.material.icons.Icons.Outlined.Add.let { icon ->
+                        ApexIconButton(icon, "Crear grupo personalizado") {
+                            showCreateDialog = true
+                        }
+                    }
+                }
             },
         )
 
@@ -139,12 +151,26 @@ fun SmartGroupsScreen() {
                 ) {
                     items(state.groups, key = { it.group.name }) { info ->
                         GroupCard(info) { vm.openGroup(info.group) }
-                        TextButton(onClick = { moveGroup = info.group }) {
-                            Text(
-                                "Mover a ${vm.smartDestPath(info.group)}",
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { moveGroup = info.group }) {
+                                Text(
+                                    "Mover",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                            TextButton(onClick = { 
+                                val info = state.groups.firstOrNull { it.group == info }
+                                if (info != null) {
+                                    toast("Grupo: ${info.group.label} - ${info.nodes.size} archivos")
+                                }
+                            }) {
+                                Text(
+                                    "Info",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
                         }
                     }
                 }

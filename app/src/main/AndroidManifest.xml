@@ -40,6 +40,11 @@
 
     <!-- NOTE: NO INTERNET permission. APEX never touches the network. -->
 
+    <!-- Foreground service for media playback -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".ApexApp"
         android:allowBackup="true"
@@ -70,6 +75,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Foreground service for media playback -->
+        <service
+            android:name=".service.MediaPlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
 
 </manifest>

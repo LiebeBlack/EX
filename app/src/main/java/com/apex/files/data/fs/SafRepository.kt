@@ -480,6 +480,187 @@ class SafRepository(private val context: Context) {
     /** Counts files (used for delete progress). */
     suspend fun countFiles(node: FileNode): Int = countEntries(node).files
 
+    /** Advanced SAF operations for better integration */
+
+    /** Gets the MIME type of a SAF document with fallback detection. */
+    fun getMimeType(node: FileNode): String {
+        val doc = document(node) ?: return "application/octet-stream"
+        return doc.type ?: FileKinds.mimeOf(node)
+    }
+
+    /** Checks if a SAF document can be read. */
+    fun canRead(node: FileNode): Boolean {
+        val doc = document(node) ?: return false
+        return try {
+            doc.canRead()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Checks if a SAF document can be written. */
+    fun canWrite(node: FileNode): Boolean {
+        val doc = document(node) ?: return false
+        return try {
+            doc.canWrite()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Gets the display name of a SAF document. */
+    fun getDisplayName(node: FileNode): String {
+        val doc = document(node) ?: return node.name
+        return doc.name ?: node.name
+    }
+
+    /** Gets the last modified time with proper error handling. */
+    fun getLastModifiedSafe(node: FileNode): Long {
+        val doc = document(node) ?: return 0L
+        return try {
+            doc.lastModified()
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    /** Gets the file size with proper error handling. */
+    fun getSizeSafe(node: FileNode): Long {
+        val doc = document(node) ?: return 0L
+        return try {
+            doc.length().coerceAtLeast(0L)
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    /** Lists child documents with detailed metadata. */
+    fun listWithMetadata(dir: FileNode, showHidden: Boolean): List<FileNode> {
+        val doc = document(dir) ?: return emptyList()
+        if (!doc.isDirectory) return emptyList()
+        
+        val out = ArrayList<FileNode>()
+        for (child in doc.listFiles()) {
+            val name = child.name ?: child.uri.lastPathSegment ?: continue
+            if (!showHidden && (name.startsWith(".") || hasNomedia(child))) continue
+            
+            val isDir = child.isDirectory
+            val size = if (isDir) 0L else try { child.length().coerceAtLeast(0L) } catch (e: Exception) { 0L }
+            val lastModified = try { child.lastModified() } catch (e: Exception) { 0L }
+            val mime = if (isDir) "" else try { child.type } catch (e: Exception) { "" }
+            
+            val path = if (dir.path == dir.name) name else "${dir.path}/$name"
+            
+            out.add(if (isDir) {
+                FileNode.forDirectory(name, path, lastModified, child.uri)
+            } else {
+                FileNode(
+                    name = name,
+                    path = path,
+                    isDir = false,
+                    size = size,
+                    lastModified = lastModified,
+                    extension = CategoryEngine.extensionOf(name),
+                    category = CategoryEngine.classify(name),
+                    uri = child.uri,
+                )
+            })
+        }
+        return out
+    }
+
+    /** Attempts to get parent directory of a SAF document. */
+    fun getParent(node: FileNode): FileNode? {
+        val doc = document(node) ?: return null
+        val parent = doc.parentFile ?: return null
+        
+        val parentName = parent.name ?: parent.uri.lastPathSegment ?: return null
+        val parentPath = node.path.substringBeforeLast('/', node.path)
+        
+        return FileNode.forDirectory(
+            name = parentName,
+            path = parentPath,
+            lastModified = try { parent.lastModified() } catch (e: Exception) { 0L },
+            uri = parent.uri,
+        )
+    }
+
+    /** Creates a unique file name in a SAF directory avoiding conflicts. */
+    suspend fun createUniqueFile(parent: FileNode, baseName: String, mime: String): FileNode? = withContext(Dispatchers.IO) {
+        val doc = document(parent) ?: return@withContext null
+        if (!doc.isDirectory) return@withContext null
+        
+        var name = baseName
+        var counter = 1
+        val dot = baseName.lastIndexOf('.')
+        val base = if (dot > 0) baseName.substring(0, dot) else baseName
+        val ext = if (dot > 0) baseName.substring(dot) else ""
+        
+        while (doc.findFile(name) != null) {
+            name = "$base ($counter)$ext"
+            counter++
+        }
+        
+        createFile(parent, name, mime)
+    }
+
+    /** Searches for files by name pattern in a SAF directory. */
+    fun searchByName(dir: FileNode, pattern: String, showHidden: Boolean): List<FileNode> {
+        val doc = document(dir) ?: return emptyList()
+        if (!doc.isDirectory) return emptyList()
+        
+        val results = ArrayList<FileNode>()
+        val regex = try {
+            Regex(pattern, RegexOption.IGNORE_CASE)
+        } catch (e: Exception) {
+            Regex.escape(pattern).toRegex()
+        }
+        
+        for (child in doc.listFiles()) {
+            val name = child.name ?: child.uri.lastPathSegment ?: continue
+            if (!showHidden && (name.startsWith(".") || hasNomedia(child))) continue
+            
+            if (regex.containsMatchIn(name)) {
+                val path = if (dir.path == dir.name) name else "${dir.path}/$name"
+                results.add(if (child.isDirectory) {
+                    FileNode.forDirectory(name, path, child.lastModified(), child.uri)
+                } else {
+                    FileNode(
+                        name = name,
+                        path = path,
+                        isDir = false,
+                        size = child.length(),
+                        lastModified = child.lastModified(),
+                        extension = CategoryEngine.extensionOf(name),
+                        category = CategoryEngine.classify(name),
+                        uri = child.uri,
+                    )
+                })
+            }
+        }
+        return results
+    }
+
+    /** Gets storage usage information for a SAF tree. */
+    suspend fun getStorageUsage(node: FileNode): Pair<Long, Int> = withContext(Dispatchers.IO) {
+        var totalSize = 0L
+        var fileCount = 0
+        
+        fun count(doc: androidx.documentfile.provider.DocumentFile) {
+            if (doc.isDirectory) {
+                for (child in doc.listFiles()) {
+                    count(child)
+                }
+            } else {
+                totalSize += try { doc.length() } catch (e: Exception) { 0L }
+                fileCount++
+            }
+        }
+        
+        document(node)?.let { count(it) }
+        Pair(totalSize, fileCount)
+    }
+
     private class ProgressSink(
         private val type: OpType,
         private val onProgress: suspend (OpProgress) -> Unit,

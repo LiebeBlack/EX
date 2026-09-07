@@ -36,8 +36,11 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Compare
+import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.ControlPointDuplicate
@@ -48,11 +51,17 @@ import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.MergeType
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.outlined.SortBySize
+import androidx.compose.material.icons.outlined.Split
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -138,6 +147,12 @@ fun ExplorerScreen(location: Location) {
     var sortMenuOpen by remember { mutableStateOf(false) }
     var showFilter by remember { mutableStateOf(false) }
     var addMenuOpen by remember { mutableStateOf(false) }
+    var advancedMenuOpen by remember { mutableStateOf(false) }
+    var showMergeDialog by remember { mutableStateOf(false) }
+    var showSplitDialog by remember { mutableStateOf(false) }
+    var showCompareDialog by remember { mutableStateOf(false) }
+    var showPermissionsDialog by remember { mutableStateOf(false) }
+    var showSymlinkDialog by remember { mutableStateOf(false) }
     /** Name prefilled in the compress dialog (depends on the current selection). */
     var compressDefaultName by remember { mutableStateOf("archivo.zip") }
     /** Node whose long-press context sheet is open (null = none). */
@@ -346,6 +361,80 @@ fun ExplorerScreen(location: Location) {
                                 addMenuOpen = false
                                 showNewFileDialog = true
                             },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Crear copia de seguridad", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                addMenuOpen = false
+                                viewModelScope.launch {
+                                    val selected = vm.selectedNodes()
+                                    if (selected.isNotEmpty()) {
+                                        val result = vm.batchBackup(selected)
+                                        toast(if (result.errors == 0) "Copia de seguridad creada" else "Error en la copia de seguridad")
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+                ApexIconButton(
+                    Icons.Outlined.CompareArrows,
+                    "Herramientas avanzadas",
+                ) {
+                    advancedMenuOpen = true
+                }
+                Box {
+                    DropdownMenu(expanded = advancedMenuOpen, onDismissRequest = { advancedMenuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Fusionar archivos de texto", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                advancedMenuOpen = false
+                                showMergeDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.MergeType, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Dividir archivo de texto", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                advancedMenuOpen = false
+                                showSplitDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.Split, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Comparar archivos", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                advancedMenuOpen = false
+                                showCompareDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.Compare, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cambiar permisos", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                advancedMenuOpen = false
+                                showPermissionsDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.TouchApp, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Crear enlaces simbólicos", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                advancedMenuOpen = false
+                                showSymlinkDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.Link, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Actualizar timestamp", style = MaterialTheme.typography.bodyMedium) },
+                            onClick = {
+                                advancedMenuOpen = false
+                                viewModelScope.launch {
+                                    val result = vm.touchFiles()
+                                    toast(if (result.errors == 0) "Timestamps actualizados" else "Error al actualizar timestamps")
+                                }
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.Backup, null) }
                         )
                     }
                 }
@@ -619,6 +708,77 @@ fun ExplorerScreen(location: Location) {
             },
             onDismiss = { showRenameDialog = false },
         )
+    }
+    if (showMergeDialog) {
+        InputDialog(
+            title = "Fusionar archivos de texto",
+            placeholder = "nombre_fusionado.txt",
+            onConfirm = { name ->
+                viewModelScope.launch {
+                    val result = vm.mergeTextFiles(name)
+                    toast(if (result.errors == 0) "Archivos fusionados" else "Error al fusionar")
+                    vm.refresh()
+                }
+                showMergeDialog = false
+            },
+            onDismiss = { showMergeDialog = false },
+        )
+    }
+    if (showSplitDialog) {
+        InputDialog(
+            title = "Dividir archivo (líneas por archivo)",
+            placeholder = "100",
+            onConfirm = { linesStr ->
+                val lines = linesStr.toIntOrNull() ?: 100
+                viewModelScope.launch {
+                    val selected = vm.selectedNodes().firstOrNull()
+                    if (selected != null) {
+                        val parts = vm.splitTextFile(selected, lines)
+                        toast("Archivo dividido en ${parts.size} partes")
+                        vm.refresh()
+                    }
+                }
+                showSplitDialog = false
+            },
+            onDismiss = { showSplitDialog = false },
+        )
+    }
+    if (showCompareDialog) {
+        val selected = vm.selectedNodes()
+        if (selected.size == 2) {
+            viewModelScope.launch {
+                val identical = vm.compareFiles(selected[0], selected[1])
+                toast(if (identical) "Los archivos son idénticos" else "Los archivos son diferentes")
+            }
+        } else {
+            toast("Selecciona exactamente 2 archivos para comparar")
+        }
+        showCompareDialog = false
+    }
+    if (showPermissionsDialog) {
+        InputDialog(
+            title = "Cambiar permisos (ej: 755)",
+            placeholder = "755",
+            onConfirm = { permStr ->
+                val permissions = permStr.toIntOrNull(8) ?: 644
+                viewModelScope.launch {
+                    val result = vm.changePermissions(permissions)
+                    toast(if (result.errors == 0) "Permisos cambiados" else "Error al cambiar permisos")
+                    vm.refresh()
+                }
+                showPermissionsDialog = false
+            },
+            onDismiss = { showPermissionsDialog = false },
+        )
+    }
+    if (showSymlinkDialog) {
+        toast("Los enlaces simbólicos se crearán en la carpeta actual")
+        viewModelScope.launch {
+            val result = vm.createSymlinks(_state.value.current ?: return@launch)
+            toast(if (result.errors == 0) "Enlaces creados" else "Error al crear enlaces")
+            vm.refresh()
+        }
+        showSymlinkDialog = false
     }
     if (showNewFolderDialog) {
         InputDialog(

@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apex.files.Screen
 import com.apex.files.data.fs.DateFormatter
 import com.apex.files.data.fs.Paths
@@ -69,8 +70,8 @@ import com.apex.files.data.model.Location
 import com.apex.files.ui.LocalContainer
 import com.apex.files.ui.LocalNavigator
 import com.apex.files.ui.NodeOpener
-import com.apex.files.ui.apexViewModel
 import com.apex.files.ui.components.ApexCard
+import com.apex.files.ui.screens.home.HomeSection
 import com.apex.files.ui.components.ApexIconButton
 import com.apex.files.ui.components.FileIcon
 import com.apex.files.ui.components.HelpSheet
@@ -90,11 +91,12 @@ fun HomeScreen() {
     val container = LocalContainer.current
     val navigator = LocalNavigator.current
     val context = LocalContext.current
-    val vm: HomeViewModel = apexViewModel(key = "home") { container -> HomeViewModel(container) }
+    val vm: HomeViewModel = viewModel()
     val state by vm.state.collectAsStateWithLifecycle()
     val favorites by container.favorites.items.collectAsStateWithLifecycle()
     val recents by container.recents.items.collectAsStateWithLifecycle()
     val semanticEnabled by container.settings.semanticSearchEnabled.collectAsStateWithLifecycle()
+    val homeConfig by container.settings.homeConfig.collectAsStateWithLifecycle()
 
     // First run: show the welcome tour once (replayable from Ajustes).
     val onboarding = container.onboarding
@@ -119,7 +121,7 @@ fun HomeScreen() {
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
         // ---- Compact header ----
-        item {
+        item(key = "header") {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -143,247 +145,261 @@ fun HomeScreen() {
             }
         }
 
-        // ---- Storage hero (tap → stats) ----
-        item {
-            ApexCard(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                onClick = { navigator.push(Screen.Stats) },
-                contentPadding = PaddingValues(14.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(34.dp)
-                            .background(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                RoundedCornerShape(10.dp),
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Outlined.Storage,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "Almacenamiento",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        if (state.indexing) {
-                            Text("Restaurando índice…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
-                        }
-                    }
-                    val percent = if (state.totalBytes > 0) ((state.usedBytes * 100) / state.totalBytes).toInt() else 0
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("$percent%", style = MonoTextStyleSmall, color = MaterialTheme.colorScheme.onBackground)
-                        Text("usado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                val fraction = if (state.totalBytes > 0) state.usedBytes.toFloat() / state.totalBytes else 0f
-                StorageBar(fraction)
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    Text(
-                        "${SizeFormatter.format(state.usedBytes)} de ${SizeFormatter.format(state.totalBytes)}",
-                        style = MonoTextStyleSmall,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        "Libre ${SizeFormatter.format(state.totalBytes - state.usedBytes)}",
-                        style = MonoTextStyleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        // ---- Quick tools ----
-        item { SectionLabel("Herramientas") }
-        item {
-            val tools = buildList {
-                add(ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Carpetas vacías") { navigator.push(Screen.Cleaner) })
-                add(ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) })
-                add(ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) })
-                add(ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
-                    navigator.push(Screen.SpaceAnalyzer(Location.Fs(Paths.internalRoot())))
-                })
-                if (semanticEnabled) {
-                    add(ToolSpec(Icons.Outlined.AutoAwesome, "Carpetas inteligentes", "Grupos por contenido") {
-                        navigator.push(Screen.SmartGroups)
-                    })
-                    add(ToolSpec(Icons.Outlined.AutoFixHigh, "Limpieza Inteligente", "Residuos y cachés") {
-                        navigator.push(Screen.Cleanup)
-                    })
-                }
-            }
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                tools.chunked(2).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { spec ->
-                            ToolTile(spec.icon, spec.title, spec.subtitle, spec.onClick, Modifier.weight(1f))
+        // ---- Dynamic sections based on home configuration ----
+        val visibleSections = homeConfig.getVisibleSections()
+        
+        visibleSections.forEach { section ->
+            when (section) {
+                HomeSection.STORAGE_HERO -> {
+                    item(key = "storage_hero") {
+                        ApexCard(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            onClick = { navigator.push(Screen.Stats) },
+                            contentPadding = PaddingValues(14.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier
+                                        .size(34.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                            RoundedCornerShape(10.dp),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Storage,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "Almacenamiento",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                    )
+                                    if (state.indexing) {
+                                        Text("Restaurando índice…", style = MaterialTheme.typography.labelSmall, color = ApexTextMuted)
+                                    }
+                                }
+                                val percent = if (state.totalBytes > 0) ((state.usedBytes * 100) / state.totalBytes).toInt() else 0
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("$percent%", style = MonoTextStyleSmall, color = MaterialTheme.colorScheme.onBackground)
+                                    Text("usado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            val fraction = if (state.totalBytes > 0) state.usedBytes.toFloat() / state.totalBytes else 0f
+                            StorageBar(fraction)
+                            Spacer(Modifier.height(8.dp))
+                            Row {
+                                Text(
+                                    "${SizeFormatter.format(state.usedBytes)} de ${SizeFormatter.format(state.totalBytes)}",
+                                    style = MonoTextStyleSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    "Libre ${SizeFormatter.format(state.totalBytes - state.usedBytes)}",
+                                    style = MonoTextStyleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
-                FullWidthToolRow(Icons.Outlined.Wifi, "Analizador Wi-Fi", "Redes, señal y dispositivos") {
-                    navigator.push(Screen.Wifi)
-                }
-                FullWidthToolRow(Icons.Outlined.DeleteSweep, "Papelera", "Recupera elementos eliminados") {
-                    navigator.push(Screen.Trash)
-                }
-            }
-        }
-
-        // ---- Smart suggestions: largest files ----
-        if (state.largest.isNotEmpty()) {
-            item { SectionLabel("Sugerencias") }
-            item {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    state.largest.forEach { node ->
-                        SuggestionRow(node = node, onClick = { openFavorite(node) })
-                    }
-                }
-            }
-        }
-
-        // ---- Categories ----
-        item { SectionLabel("Categorías") }
-        item {
-            val columns = ((LocalConfiguration.current.screenWidthDp - 42) / 104).coerceIn(2, 6)
-            val entries = buildList {
-                add(Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"))
-                add(Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"))
-                add(Triple(Category.AUDIO, Icons.Outlined.Audiotrack, "Audio"))
-                add(Triple(Category.DOCUMENT, Icons.Outlined.Description, "Documentos"))
-                add(Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"))
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    add(Triple(Category.DOWNLOADS, Icons.Outlined.Download, "Descargas"))
-                }
-            }
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                entries.chunked(columns).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { (category, icon, label) ->
-                            CategoryTile(
-                                category = category,
-                                icon = icon,
-                                label = label,
-                                count = state.categoryCounts[category] ?: 0,
-                                onClick = { navigator.push(Screen.Category(category)) },
-                                modifier = Modifier.weight(1f),
-                            )
+                
+                HomeSection.QUICK_TOOLS -> {
+                    item(key = "tools_label") { SectionLabel("Herramientas") }
+                    item(key = "tools_grid") {
+                        val tools = buildList {
+                            add(ToolSpec(Icons.Outlined.CleaningServices, "Limpiador Vacío", "Carpetas vacías") { navigator.push(Screen.Cleaner) })
+                            add(ToolSpec(Icons.Outlined.ContentCopy, "Duplicados", "Detección SHA-256") { navigator.push(Screen.Duplicates) })
+                            add(ToolSpec(Icons.Outlined.Android, "Filtro APK", "Instaladores redundantes") { navigator.push(Screen.Apk) })
+                            add(ToolSpec(Icons.Outlined.Bolt, "Analizador de espacio", "Mapa de bloques") {
+                                navigator.push(Screen.SpaceAnalyzer(Location.Fs(Paths.internalRoot())))
+                            })
+                            if (semanticEnabled) {
+                                add(ToolSpec(Icons.Outlined.AutoAwesome, "Carpetas inteligentes", "Grupos por contenido") {
+                                    navigator.push(Screen.SmartGroups)
+                                })
+                                add(ToolSpec(Icons.Outlined.AutoFixHigh, "Limpieza Inteligente", "Residuos y cachés") {
+                                    navigator.push(Screen.Cleanup)
+                                })
+                            }
+                        }
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            tools.chunked(2).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    row.forEach { spec ->
+                                        ToolTile(spec.icon, spec.title, spec.subtitle, spec.onClick, Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                            FullWidthToolRow(Icons.Outlined.Wifi, "Analizador Wi-Fi", "Redes, señal y dispositivos") {
+                                navigator.push(Screen.Wifi)
+                            }
+                            FullWidthToolRow(Icons.Outlined.DeleteSweep, "Papelera", "Recupera elementos eliminados") {
+                                navigator.push(Screen.Trash)
+                            }
                         }
                     }
                 }
-            }
-        }
-
-        // ---- Favorites ----
-        if (favorites.isNotEmpty()) {
-            item { SectionLabel("Favoritos") }
-            item {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    favorites.forEach { favorite ->
-                        FavoriteCard(
-                            node = favorite.node,
-                            onClick = { openFavorite(favorite.node) },
-                            onRemove = { container.favorites.remove(favorite.node.path) },
-                        )
-                    }
-                }
-            }
-        }
-
-        // ---- Recents ----
-        if (recents.isNotEmpty()) {
-            item {
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SectionLabel("Recientes", modifier = Modifier.weight(1f))
-                    TextButton(onClick = { container.recents.clear() }) {
-                        Text("Limpiar", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            item {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    recents.forEach { entry ->
-                        RecentRow(
-                            node = entry.node,
-                            openedAt = entry.openedAt,
-                            onClick = { openFavorite(entry.node) },
-                            onRemove = { container.recents.remove(entry.node.path) },
-                        )
-                    }
-                }
-            }
-        }
-
-        // ---- Drives ----
-        item { SectionLabel("Unidades") }
-        item {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                for (drive in state.drives) {
-                    ApexCard(
-                        Modifier.fillMaxWidth(),
-                        onClick = { navigator.push(Screen.Explorer(drive.location)) },
-                        contentPadding = PaddingValues(12.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Outlined.Storage,
-                                null,
-                                tint = if (drive.removable) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                drive.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                
+                HomeSection.SUGGESTIONS -> {
+                    if (state.largest.isNotEmpty()) {
+                        item(key = "suggestions_label") { SectionLabel("Sugerencias") }
+                        item(key = "suggestions_list") {
+                            Column(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                state.largest.forEach { node ->
+                                    SuggestionRow(node = node, onClick = { openFavorite(node) })
+                                }
+                            }
                         }
                     }
                 }
-                ApexCard(
-                    Modifier.fillMaxWidth(),
-                    onClick = { navigator.push(Screen.Drives) },
-                    contentPadding = PaddingValues(12.dp),
-                ) {
-                    Text(
-                        "Gestionar unidades · USB-OTG",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                
+                HomeSection.CATEGORIES -> {
+                    item(key = "categories_label") { SectionLabel("Categorías") }
+                    item(key = "categories_grid") {
+                        val columns = ((LocalConfiguration.current.screenWidthDp - 42) / 104).coerceIn(2, 6)
+                        val entries = buildList {
+                            add(Triple(Category.IMAGE, Icons.Outlined.Image, "Imágenes"))
+                            add(Triple(Category.VIDEO, Icons.Outlined.Movie, "Videos"))
+                            add(Triple(Category.AUDIO, Icons.Outlined.Audiotrack, "Audio"))
+                            add(Triple(Category.DOCUMENT, Icons.Outlined.Description, "Documentos"))
+                            add(Triple(Category.ARCHIVE, Icons.Outlined.FolderZip, "Archivos"))
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                add(Triple(Category.DOWNLOADS, Icons.Outlined.Download, "Descargas"))
+                            }
+                        }
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            entries.chunked(columns).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    row.forEach { (category, icon, label) ->
+                                        CategoryTile(
+                                            category = category,
+                                            icon = icon,
+                                            label = label,
+                                            count = state.categoryCounts[category] ?: 0,
+                                            onClick = { navigator.push(Screen.Category(category)) },
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                HomeSection.FAVORITES -> {
+                    if (favorites.isNotEmpty()) {
+                        item(key = "favorites_label") { SectionLabel("Favoritos") }
+                        item(key = "favorites_list") {
+                            Column(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                favorites.forEach { favorite ->
+                                    FavoriteCard(
+                                        node = favorite.node,
+                                        onClick = { openFavorite(favorite.node) },
+                                        onRemove = { container.favorites.remove(favorite.node.path) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                HomeSection.RECENTS -> {
+                    if (recents.isNotEmpty()) {
+                        item(key = "recents_header") {
+                            Row(
+                                Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SectionLabel("Recientes", modifier = Modifier.weight(1f))
+                                TextButton(onClick = { container.recents.clear() }) {
+                                    Text("Limpiar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                        item(key = "recents_list") {
+                            Column(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                recents.forEach { entry ->
+                                    RecentRow(
+                                        node = entry.node,
+                                        openedAt = entry.openedAt,
+                                        onClick = { openFavorite(entry.node) },
+                                        onRemove = { container.recents.remove(entry.node.path) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                HomeSection.DRIVES -> {
+                    item(key = "drives_label") { SectionLabel("Unidades") }
+                    item(key = "drives_list") {
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            for (drive in state.drives) {
+                                ApexCard(
+                                    Modifier.fillMaxWidth(),
+                                    onClick = { navigator.push(Screen.Explorer(drive.location)) },
+                                    contentPadding = PaddingValues(12.dp),
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Outlined.Storage,
+                                            null,
+                                            tint = if (drive.removable) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            drive.name,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
+                            ApexCard(
+                                Modifier.fillMaxWidth(),
+                                onClick = { navigator.push(Screen.Drives) },
+                                contentPadding = PaddingValues(12.dp),
+                            ) {
+                                Text(
+                                    "Gestionar unidades · USB-OTG",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

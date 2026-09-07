@@ -131,6 +131,11 @@ fun CleanupScreen() {
                     }
                     TextButton(onClick = { vm.selectAll() }) { Text("Todo", color = MaterialTheme.colorScheme.primary) }
                     TextButton(onClick = { vm.clearSelection() }) { Text("Nada", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    TextButton(onClick = { vm.analyzeByAge() }) { Text("Antiguos", color = MaterialTheme.colorScheme.primary) }
+                    TextButton(onClick = { 
+                        val stats = vm.getStatistics()
+                        toast("Estadísticas: ${stats.entries.joinToString { "${it.key}: ${it.value}" }}")
+                    }) { Text("Estadísticas", color = MaterialTheme.colorScheme.primary) }
                 }
                 LazyColumn(
                     Modifier.weight(1f).fillMaxWidth(),

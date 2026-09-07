@@ -3,6 +3,7 @@ package com.apex.files.tools
 import com.apex.files.core.HashAlgorithm
 import com.apex.files.core.HashUtil
 import com.apex.files.data.fs.FsRepository
+import com.apex.files.data.fs.OpResult
 import com.apex.files.data.fs.Paths
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.model.SortOrder
@@ -12,6 +13,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Two-phase duplicate detection:
@@ -86,6 +89,50 @@ class DuplicateFinder(private val fs: FsRepository) {
         }
         emit(DupScan(done = true, hashed = hashed, totalCandidates = total, groups = groups))
     }.flowOn(Dispatchers.IO)
+
+    /** Deletes all but the first file in each duplicate group. */
+    suspend fun deleteDuplicates(groups: List<DupGroup>, keepFirst: Boolean = true): OpResult = withContext(Dispatchers.IO) {
+        val acc = com.apex.files.data.fs.OpAccumulator()
+        for (group in groups) {
+            currentCoroutineContext().ensureActive()
+            val toDelete = if (keepFirst) group.files.drop(1) else group.files
+            for (file in toDelete) {
+                if (file.uri != null) continue
+                val f = File(file.path)
+                if (f.delete()) {
+                    acc.addFiles()
+                    acc.addBytes(group.size)
+                } else {
+                    acc.error("No se pudo eliminar ${file.name}")
+                }
+            }
+        }
+        acc.result()
+    }
+
+    /** Moves duplicates to a dedicated folder instead of deleting them. */
+    suspend fun moveToDuplicatesFolder(groups: List<DupGroup>, destDir: FileNode): OpResult = withContext(Dispatchers.IO) {
+        val acc = com.apex.files.data.fs.OpAccumulator()
+        val dest = File(destDir.path)
+        if (!dest.exists()) dest.mkdirs()
+
+        for (group in groups) {
+            currentCoroutineContext().ensureActive()
+            val toMove = group.files.drop(1) // Keep first, move rest
+            for (file in toMove) {
+                if (file.uri != null) continue
+                val src = File(file.path)
+                val target = File(dest, "duplicate_${file.name}")
+                if (src.renameTo(target)) {
+                    acc.addFiles()
+                    acc.addBytes(group.size)
+                } else {
+                    acc.error("No se pudo mover ${file.name}")
+                }
+            }
+        }
+        acc.result()
+    }
 }
 
 /** Pure phase-2 grouping, unit-testable without Android. */

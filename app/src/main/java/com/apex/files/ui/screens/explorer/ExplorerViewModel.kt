@@ -566,6 +566,237 @@ class ExplorerViewModel(
         _state.update { it.copy(notice = null) }
     }
 
+    // ---------------------------------------------------- advanced operations
+
+    /** Creates a backup of the selected file with timestamp. */
+    suspend fun createBackup(node: FileNode): FileNode? {
+        return container.fs.createTimestampedBackup(node)
+    }
+
+    /** Batch operation: create backups for all selected files. */
+    suspend fun batchBackup(nodes: List<FileNode>): OpResult {
+        val acc = OpResult()
+        for (node in nodes) {
+            val backup = createBackup(node)
+            if (backup != null) {
+                acc.filesDone++
+            } else {
+                acc.errors++
+            }
+        }
+        return acc
+    }
+
+    /** Merges selected text files into a single file. */
+    suspend fun mergeTextFiles(nodes: List<FileNode>, destName: String): OpResult {
+        if (nodes.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        
+        val cur = _state.value.current ?: return OpResult(errors = 1, firstError = "No hay carpeta actual")
+        val destNode = container.fs.createFile(cur, destName)
+        
+        if (destNode == null) {
+            return OpResult(errors = 1, firstError = "No se pudo crear el archivo de destino")
+        }
+        
+        val success = container.fs.mergeTextFiles(nodes, destNode, Charsets.UTF_8)
+        return if (success) {
+            OpResult(filesDone = nodes.size)
+        } else {
+            OpResult(errors = 1, firstError = "Error al fusionar archivos")
+        }
+    }
+
+    /** Splits a selected text file into multiple parts. */
+    suspend fun splitTextFile(node: FileNode, linesPerFile: Int): List<FileNode> {
+        val cur = _state.value.current ?: return emptyList()
+        return container.fs.splitTextFile(node, linesPerFile, cur, Charsets.UTF_8)
+    }
+
+    /** Batch rename with pattern support. */
+    suspend fun batchRenameWithPattern(pattern: String, startNumber: Int): OpResult {
+        val sources = selectedNodes()
+        if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        
+        return container.fs.batchRename(sources, pattern, startNumber)
+    }
+
+    /** Changes file permissions for selected files. */
+    suspend fun changePermissions(permissions: Int): OpResult {
+        val sources = selectedNodes()
+        if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        
+        val acc = OpResult()
+        for (source in sources) {
+            val success = container.fs.changePermissions(source, permissions)
+            if (success) {
+                acc.filesDone++
+            } else {
+                acc.errors++
+            }
+        }
+        return acc
+    }
+
+    /** Changes timestamps for selected files to current time. */
+    suspend fun touchFiles(): OpResult {
+        val sources = selectedNodes()
+        if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        
+        val now = System.currentTimeMillis()
+        val acc = OpResult()
+        
+        for (source in sources) {
+            val success = container.fs.setLastModified(source, now)
+            if (success) {
+                acc.filesDone++
+            } else {
+                acc.errors++
+            }
+        }
+        return acc
+    }
+
+    /** Copies file paths to clipboard as formatted list. */
+    fun copyFormattedPaths(format: String): String {
+        val nodes = selectedNodes()
+        if (nodes.isEmpty()) return ""
+        
+        return nodes.joinToString("\n") { node ->
+            format.replace("{name}", node.name)
+                .replace("{path}", node.path)
+                .replace("{size}", SizeFormatter.format(node.size))
+        }
+    }
+
+    /** Creates symbolic links for selected files. */
+    suspend fun createSymlinks(destDir: FileNode): OpResult {
+        val sources = selectedNodes()
+        if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        
+        val acc = OpResult()
+        for (source in sources) {
+            val linkName = "link_${source.name}"
+            val created = container.fs.createSymlink(source, linkName, destDir)
+            if (created != null) {
+                acc.filesDone++
+            } else {
+                acc.errors++
+            }
+        }
+        return acc
+    }
+
+    /** Compares two selected files for content equality. */
+    suspend fun compareFiles(node1: FileNode, node2: FileNode): Boolean {
+        return container.fs.filesAreIdentical(node1, node2)
+    }
+
+    /** Finds files similar to the selected file. */
+    suspend fun findSimilarFiles(reference: FileNode): List<FileNode> {
+        val cur = _state.value.current ?: return emptyList()
+        return container.fs.findSimilarFiles(reference, cur, similarityThreshold = 0.7f)
+    }
+
+    /** Monitors current directory for changes (returns a job that can be cancelled). */
+    fun startMonitoring(onChange: (List<FileNode>) -> Unit): kotlinx.coroutines.Job {
+        val cur = _state.value.current ?: return kotlinx.coroutines.Job()
+        return viewModelScope.launch {
+            container.fs.monitorDirectory(cur, onChange = onChange)
+        }
+    }
+
+    /** Compresses selected files to GZIP format. */
+    suspend fun compressGzip(destName: String): OpResult {
+        val sources = selectedNodes()
+        if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        if (sources.size != 1) return OpResult(errors = 1, firstError = "GZIP solo soporta un archivo a la vez")
+        
+        val cur = _state.value.current ?: return OpResult(errors = 1, firstError = "No hay carpeta actual")
+        val destNode = container.fs.createFile(cur, "$destName.gz")
+        
+        if (destNode == null) {
+            return OpResult(errors = 1, firstError = "No se pudo crear el archivo de destino")
+        }
+        
+        val success = container.fs.compressGzip(sources[0], destNode)
+        return if (success) {
+            OpResult(filesDone = 1)
+        } else {
+            OpResult(errors = 1, firstError = "Error al comprimir archivo")
+        }
+    }
+
+    /** Decompresses selected GZIP file. */
+    suspend fun decompressGzip(): OpResult {
+        val sources = selectedNodes()
+        if (sources.isEmpty()) return OpResult(errors = 1, firstError = "No hay archivos seleccionados")
+        if (sources.size != 1) return OpResult(errors = 1, firstError = "Solo se puede descomprimir un archivo a la vez")
+        
+        val source = sources[0]
+        if (!source.name.endsWith(".gz")) {
+            return OpResult(errors = 1, firstError = "El archivo no es un archivo GZIP")
+        }
+        
+        val cur = _state.value.current ?: return OpResult(errors = 1, firstError = "No hay carpeta actual")
+        val outName = source.name.removeSuffix(".gz")
+        val destNode = container.fs.createFile(cur, outName)
+        
+        if (destNode == null) {
+            return OpResult(errors = 1, firstError = "No se pudo crear el archivo de destino")
+        }
+        
+        val success = container.fs.decompressGzip(source, destNode)
+        return if (success) {
+            OpResult(filesDone = 1)
+        } else {
+            OpResult(errors = 1, firstError = "Error al descomprimir archivo")
+        }
+    }
+
+    /** Gets detailed storage statistics for current directory. */
+    suspend fun getDirectoryStats(): Pair<Long, Int> {
+        val cur = _state.value.current ?: return Pair(0L, 0)
+        val size = container.fs.sizeOf(cur)
+        val count = container.fs.countEntries(cur)
+        return Pair(size, count.files + count.dirs)
+    }
+
+    /** Filters files by multiple criteria simultaneously. */
+    fun applyAdvancedFilter(
+        sizeMin: Long? = null,
+        sizeMax: Long? = null,
+        dateAfter: Long? = null,
+        dateBefore: Long? = null,
+        extensions: Set<String>? = null,
+    ): List<FileNode> {
+        return _state.value.entries.filter { node ->
+            if (sizeMin != null && node.size < sizeMin) return@filter false
+            if (sizeMax != null && node.size > sizeMax) return@filter false
+            if (dateAfter != null && node.lastModified < dateAfter) return@filter false
+            if (dateBefore != null && node.lastModified > dateBefore) return@filter false
+            if (extensions != null && node.extension !in extensions) return@filter false
+            true
+        }
+    }
+
+    /** Sorts current entries by custom comparator. */
+    fun sortByCustom(comparator: (FileNode, FileNode) -> Int) {
+        val sorted = _state.value.entries.sortedWith(comparator)
+        _state.update { it.copy(entries = sorted, visibleEntries = sorted) }
+    }
+
+    /** Groups files by category and returns the groups. */
+    fun groupByCategory(): Map<String, List<FileNode>> {
+        return _state.value.entries.groupBy { it.category.displayName }
+    }
+
+    /** Groups files by extension and returns the groups. */
+    fun groupByExtension(): Map<String, List<FileNode>> {
+        return _state.value.entries.groupBy { 
+            if (it.extension.isEmpty()) "sin extensión" else it.extension 
+        }
+    }
+
     // --------------------------------------------------------- properties
 
     fun showProperties(node: FileNode) {

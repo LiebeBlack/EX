@@ -2,13 +2,22 @@ package com.apex.files.data.storage
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import com.apex.files.data.fs.Paths
 import com.apex.files.data.model.Location
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
 
 /** Browsable volumes: internal storage, removable SD, and USB-OTG SAF trees. */
-class DrivesRepository(private val context: Context) {
+@Singleton
+class DrivesRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    @Named("EncryptedDrives") encryptedPrefs: SharedPreferences
+) {
 
     data class Volume(
         val key: String,
@@ -21,7 +30,7 @@ class DrivesRepository(private val context: Context) {
             get() = if (safUri != null) Location.Saf(safUri, name) else Location.Fs(File(path!!))
     }
 
-    private val prefs = context.getSharedPreferences("apex_drives", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = encryptedPrefs
 
     fun volumes(): List<Volume> {
         val out = ArrayList<Volume>()

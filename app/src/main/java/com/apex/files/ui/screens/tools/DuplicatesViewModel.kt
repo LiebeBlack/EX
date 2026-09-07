@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 
 class DuplicatesViewModel(private val container: AppContainer) : ViewModel() {
 
-    private val toolRoots = ToolRoots(container.appContext)
+    private val toolRoots = container.toolRoots
 
     data class UiState(
         val scanning: Boolean = false,

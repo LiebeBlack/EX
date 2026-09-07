@@ -10,6 +10,7 @@ import com.apex.files.data.search.ContentIndexer
 import com.apex.files.data.model.FileNode
 import com.apex.files.data.storage.DrivesRepository
 import com.apex.files.data.storage.StorageStats
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
@@ -17,8 +18,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HomeViewModel(private val container: AppContainer) : ViewModel() {
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val container: AppContainer
+) : ViewModel() {
 
     data class UiState(
         val totalBytes: Long = 0L,
